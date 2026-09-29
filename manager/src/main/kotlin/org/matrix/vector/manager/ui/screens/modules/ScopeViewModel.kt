@@ -502,20 +502,37 @@ class ScopeViewModel(
 
                 val info =
                     withContext(Dispatchers.IO) {
-                        runCatching {
-                                packageManager.getApplicationInfo(
-                                    modulePackageName,
-                                    android.content.pm.PackageManager.GET_META_DATA,
-                                )
-                            }
-                            .onFailure { e ->
-                                logW(
-                                    "scope: package info for $modulePackageName (user $userId) " +
-                                        "unavailable, no recommended scope",
-                                    e,
-                                )
-                            }
-                            .getOrNull()
+                        // The module's own `ApplicationInfo`, taken from the cross-user list the
+                        // daemon builds rather than from this process's package manager.
+                        //
+                        // The manager's package manager answers for its own user alone, and a
+                        // module installed only in another profile — a work-profile-only helper,
+                        // say — is not installed for the manager's user at all, so the lookup
+                        // throws `NameNotFoundException` and the module reads as declaring no
+                        // scope. Its `xposedscope` is right there in the APK, and the daemon
+                        // already enumerated that copy for exactly this screen; reading the
+                        // recommendation from the same list is what lets a work-profile module
+                        // show the apps it asks for, marked "requested by this module".
+                        //
+                        // The local lookup stays as a fallback: the cross-user list drops a
+                        // package that declares no process (it can never be injected into), and a
+                        // module in the manager's own user is still readable without the daemon.
+                        apps.firstOrNull { it.packageName == modulePackageName }
+                            ?.applicationInfo
+                            ?: runCatching {
+                                    packageManager.getApplicationInfo(
+                                        modulePackageName,
+                                        android.content.pm.PackageManager.GET_META_DATA,
+                                    )
+                                }
+                                .onFailure { e ->
+                                    logW(
+                                        "scope: package info for $modulePackageName (user $userId) " +
+                                            "unavailable, no recommended scope",
+                                        e,
+                                    )
+                                }
+                                .getOrNull()
                     }
                 // One inspection, two answers: what the module asks to hook, and which generation
                 // of module it is. Both come out of the same pass over the APK, and opening it is
@@ -545,8 +562,15 @@ class ScopeViewModel(
 
                 _uiState.value =
                     ScopeUiState(
+                        // The label comes from the same possibly-foreign `ApplicationInfo` as the
+                        // scope above, and reading it resolves the module's resources through this
+                        // process's package manager. That can fail for a package installed only in
+                        // another profile, so fall back to the package name rather than take the
+                        // scope screen down over a title.
                         moduleName =
-                            info?.loadLabel(packageManager)?.toString() ?: modulePackageName,
+                            runCatching { info?.loadLabel(packageManager)?.toString() }
+                                .getOrNull()
+                                ?: modulePackageName,
                         isEnabled = modulePackageName in moduleRepository.enabledModulesState.value,
                         includeNewApps =
                             daemonClient.getIncludeNewApps(modulePackageName).getOrDefault(false),
