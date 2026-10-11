@@ -45,7 +45,8 @@ extract() {
   read -r expected_hash < "$hash_path"
   expected_hash="${expected_hash%% *}" # Strip anything after the actual hash string
 
-  if ! echo "$expected_hash  $file_path" | sha256sum -c -s -; then
+  # Use the common checksum interface, not BusyBox's non-portable -s flag.
+  if ! printf '%s  %s\n' "$expected_hash" "$file_path" | sha256sum -c - >/dev/null 2>&1; then
     abort_verify "Failed to verify $file"
   fi
 
@@ -128,11 +129,13 @@ else
 fi
 
 ui_print "- Setting permissions"
-set_perm_recursive "$MODPATH" 0 0 0755 0644
+# The manager APK is handed to shell/app domains over Binder. Request its
+# readable label explicitly rather than relying on a root manager's defaults.
+set_perm_recursive "$MODPATH" 0 0 0755 0644 u:object_r:system_file:s0
 [ -d "$MODPATH/bin" ] && set_perm_recursive "$MODPATH/bin" 0 2000 0755 0755 u:object_r:xposed_file:s0
 
-set_perm "$MODPATH/daemon" 0 0 0744
-set_perm "$MODPATH/cli" 0 0 0744
+set_perm "$MODPATH/daemon" 0 0 0744 u:object_r:system_file:s0
+set_perm "$MODPATH/cli" 0 0 0744 u:object_r:system_file:s0
 
 if [ "$(grep_prop ro.maple.enable)" = "1" ]; then
     ui_print "- Add ro.maple.enable=0"

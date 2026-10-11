@@ -6,12 +6,14 @@ debug="@DEBUG@"
 
 # Safely check for debug APK and set classpath
 if [ -r "$tmpDaemonApk" ]; then
-  java_options="-Djava.class.path=$tmpDaemonApk"
+  daemon_apk="$tmpDaemonApk"
   debug="true"
 else
-  java_options="-Djava.class.path=$dir/daemon.apk"
+  daemon_apk="$dir/daemon.apk"
 fi
 
+# Only fixed VM flags are word-split below; the APK path is always one argument.
+java_options=""
 # Apply debug options based on Android SDK version.
 # Reference: https://developer.android.com/ndk/guides/wrap-script#debugging_when_using_wrapsh
 if [ "$debug" = "true" ]; then
@@ -46,4 +48,4 @@ fi
 [ "$debug" = "true" ] && log -p d -t "Vector" "Starting daemon $*"
 
 # Launch the daemon
-exec /system/bin/app_process $java_options /system/bin --nice-name=vectord org.matrix.vector.daemon.VectorDaemon "$@" >/dev/null 2>&1
+exec /system/bin/app_process "-Djava.class.path=$daemon_apk" $java_options /system/bin --nice-name=vectord org.matrix.vector.daemon.VectorDaemon "$@" >/dev/null 2>&1

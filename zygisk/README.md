@@ -10,6 +10,12 @@ The subsystem is divided into two discrete layers:
 
 ## Daemon launch lifecycle
 
+The package owns this lifecycle; no companion rooting app or device-specific
+compatibility script is involved. `module/customize.sh` extracts verified
+payloads and explicitly labels the module tree `system_file` (dex2oat wrappers
+retain `xposed_file`), rather than assuming a root manager's default label. The
+daemon also reasserts the manager APK label if a platform relabel changed it.
+
 `module/service.sh` creates an isolated mount namespace and makes it recursively
 slave before `module/daemon` mounts its resource cache. Namespace or mount
 failure stops the launch; it must never fall back to mounting in the caller's
@@ -28,7 +34,8 @@ Enabled module metadata or a library held by Zygisk proves neither daemon health
 nor successful framework injection. Check `Vector`/`VectorDaemon` logcat output
 and the daemon process separately before considering a restart.
 
-Host regression tests (Linux, Python 3, JDK 21; run from the project root):
+Host regression tests (Linux, Python 3, JDK 21, `unzip`, standard shell utilities
+including `sha256sum`; run from the project root):
 
 ```sh
 python3 -m unittest discover -s daemon/tests -v
@@ -37,8 +44,15 @@ python3 -m unittest discover -s zygisk/tests -v
 
 The lock tests compile the production Java class and use separate JVMs, including
 concurrent contenders and SIGKILL recovery. Launcher tests mock namespace/mount
-commands and never mount anything on the host. Both run before CI packaging;
-Android packaging and physical-device startup remain separate validation gates.
+commands and never mount anything on the host. The standalone installation tests
+execute `customize.sh` → `service.sh` → `daemon` without any companion package,
+using Magisk/KernelSU/APatch-style installer environments and all four ABIs. They
+cover checksum rejection, explicit labels, file modes, release/debug VM options,
+and argument preservation. ZIP extraction and checksums are real; root-manager
+helpers, SELinux operations, namespaces, mounts and `app_process` are simulated.
+These tests run before CI packaging, not instead of it. Actual root-manager
+integration, Android/ART execution and physical-device startup remain separate
+validation gates; the host matrix does not certify every ROM or device.
 
 ## IPC Architecture and Binder Relay
 
