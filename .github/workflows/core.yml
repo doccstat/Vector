@@ -90,6 +90,11 @@ jobs:
           distribution: temurin
           java-version: 21
 
+      - name: Check daemon lifecycle
+        run: |
+          python3 -m unittest discover -s daemon/tests -v
+          python3 -m unittest discover -s zygisk/tests -v
+
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v6
 

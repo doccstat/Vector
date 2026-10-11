@@ -4,13 +4,17 @@ MODDIR="${0%/*}"
 cd "$MODDIR" || exit 1
 MODDIR="$PWD"
 
-# This is only a fast path. Concurrent launches are serialized by the daemon's
-# kernel file lock, which is released on process death and reboot.
-if pidof vectord >/dev/null 2>&1; then
-    exit 0
-fi
-
+# Always let the daemon acquire its kernel lock. A process name, PID file, or
+# directory is not proof of ownership, and must not suppress a future launch.
 # Set propagation inside the new namespace, before the daemon mounts anything.
 # Both toybox and busybox accept -m; toybox has no --propagation option.
-unshare -m sh -c 'mount --make-rslave / && exec "$@"' vector-namespace \
-    "$MODDIR/daemon" --system-server-max-retry=3 "$@" &
+(
+    unshare -m sh -c 'mount --make-rslave / && exec "$@"' vector-namespace \
+        "$MODDIR/daemon" --system-server-max-retry=3 "$@"
+    status=$?
+    if [ "$status" -ne 0 ]; then
+        message="Daemon launch failed (exit $status); check namespace/mount errors and VectorDaemon logs"
+        echo "Vector: $message" >&2
+        log -p e -t Vector "$message"
+    fi
+) </dev/null &

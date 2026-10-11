@@ -49,7 +49,17 @@ object VectorDaemon {
 
   @JvmStatic
   fun main(args: Array<String>) {
-    if (!FileSystem.tryLock()) kotlin.system.exitProcess(0)
+    val acquired =
+        try {
+          FileSystem.tryLock()
+        } catch (e: Exception) {
+          Log.e(TAG, "Cannot acquire daemon lock; refusing to start", e)
+          kotlin.system.exitProcess(1)
+        }
+    if (!acquired) {
+      Log.i(TAG, "Another daemon owns the lock; skipping duplicate launch")
+      kotlin.system.exitProcess(0)
+    }
 
     var systemServerMaxRetry = 1
     for (arg in args) {

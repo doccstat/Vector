@@ -27,7 +27,10 @@ fi
 
 # Mount an empty temporary file system over /data/resource-cache to avoid possible overlay conflicts.
 # Note that this script runs inside an isolated mount namespace (via unshare).
-mount tmpfs -t tmpfs /data/resource-cache
+if ! mount tmpfs -t tmpfs /data/resource-cache; then
+  echo "Vector: Cannot isolate /data/resource-cache; refusing to start daemon" >&2
+  exit 1
+fi
 
 # Wait for Zygote socket using a polling loop
 if [ ! -S "/dev/socket/zygote" ]; then
