@@ -18,13 +18,9 @@ import java.io.File
 import java.io.FileInputStream
 import java.io.InputStream
 import java.nio.channels.Channels
-import java.nio.channels.FileChannel
-import java.nio.channels.FileLock
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
-import java.nio.file.StandardOpenOption
-import java.nio.file.attribute.PosixFilePermissions
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -88,9 +84,7 @@ object FileSystem {
   @Volatile private var preloadDex: SharedMemory? = null
 
   private val formatter = DateTimeFormatter.ISO_LOCAL_DATE_TIME.withZone(ZoneId.systemDefault())
-  private val lockPath: Path = basePath.resolve("lock")
-  private var fileLock: FileLock? = null
-  private var lockChannel: FileChannel? = null
+  private val daemonLock = DaemonLock(basePath.resolve("lock"))
 
   init {
     runCatching {
@@ -156,19 +150,8 @@ object FileSystem {
     return cliSocket
   }
 
-  /** Tries to lock the daemon lockfile. Returns false if another daemon is running. */
-  fun tryLock(): Boolean {
-    return runCatching {
-          val permissions =
-              PosixFilePermissions.asFileAttribute(PosixFilePermissions.fromString("rw-------"))
-          lockChannel =
-              FileChannel.open(
-                  lockPath, setOf(StandardOpenOption.CREATE, StandardOpenOption.WRITE), permissions)
-          fileLock = lockChannel?.tryLock()
-          fileLock?.isValid == true
-        }
-        .getOrDefault(false)
-  }
+  /** Returns false only for a live owner; lock I/O errors propagate to the startup diagnostics. */
+  fun tryLock(): Boolean = daemonLock.tryAcquire()
 
   /** Clears all special file attributes (like immutable) on a directory. */
   fun chattr0(path: Path): Boolean {

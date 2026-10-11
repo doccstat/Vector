@@ -8,6 +8,38 @@ The subsystem is divided into two discrete layers:
 1. _Native Zygisk Layer_ (C++): Hooks process creation via Zygisk, filters target processes, establishes the initial IPC bridge, and bootstraps the Dalvik environment from memory.
 2. _Framework Loader_ (Kotlin): The Java-world payload. It handles high-level Android framework manipulation, manages the custom Binder routing service, and orchestrates the Parasitic Manager execution.
 
+## Daemon launch lifecycle
+
+`module/service.sh` creates an isolated mount namespace and makes it recursively
+slave before `module/daemon` mounts its resource cache. Namespace or mount
+failure stops the launch; it must never fall back to mounting in the caller's
+namespace. Failed asynchronous launches are reported to stderr and the `Vector`
+logcat tag.
+
+The daemon's `DaemonLock` is the sole singleton authority. Its open kernel file
+lock survives framework restarts and is released on process death, SIGKILL, or
+reboot. A leftover lock file is harmless and must not be deleted; unlinking it
+could allow two owners to lock different inodes. Process names and historical
+`.vectord-start` directories are not ownership checks. Only actual contention
+is a successful duplicate no-op; lock I/O errors are logged and exit nonzero.
+There is no automatic launcher retry/reboot loop.
+
+Enabled module metadata or a library held by Zygisk proves neither daemon health
+nor successful framework injection. Check `Vector`/`VectorDaemon` logcat output
+and the daemon process separately before considering a restart.
+
+Host regression tests (Linux, Python 3, JDK 21; run from the project root):
+
+```sh
+python3 -m unittest discover -s daemon/tests -v
+python3 -m unittest discover -s zygisk/tests -v
+```
+
+The lock tests compile the production Java class and use separate JVMs, including
+concurrent contenders and SIGKILL recovery. Launcher tests mock namespace/mount
+commands and never mount anything on the host. Both run before CI packaging;
+Android packaging and physical-device startup remain separate validation gates.
+
 ## IPC Architecture and Binder Relay
 
 Vector utilizes a two-phase IPC routing mechanism to establish communication between injected applications and the root daemon. Instead of registering standard AIDL endpoints with ServiceManager, it intercepts the lowest level of Java Binder communication within the Dalvik VM.
