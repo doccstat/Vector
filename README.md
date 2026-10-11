@@ -38,6 +38,11 @@ Vector supports devices running **Android 8.1 through Android 17 Beta**.
 4. Reboot the device.
 5. Access management settings via the system notification.
 
+The module is self-contained: its installer and boot scripts manage Vector's
+permissions, daemon namespace, and crash-safe singleton lock. No companion
+rooting app, device-specific patch script, or manual lock cleanup is required.
+The Android and Zygisk requirements above still apply.
+
 ---
 
 ### Downloads
