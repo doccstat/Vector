@@ -81,7 +81,7 @@ exec "$@"
         self.command("mount", '''
 [ "$VECTOR_TEST_NAMESPACE" = 1 ] || exit 92
 case "$*" in
-  '--make-rslave /') printf 'rslave\\n' >> "$TRACE" ;;
+  '-t rootfs -o rslave rootfs /') printf 'rslave\\n' >> "$TRACE" ;;
   'tmpfs -t tmpfs /data/resource-cache') printf 'resource-cache\\n' >> "$TRACE" ;;
   *) exit 93 ;;
 esac
@@ -107,6 +107,9 @@ exec python3 -c 'import json,os,sys; open(os.environ["APP_ARGS"],"w").write(json
             )
         }
         # Only platform-path substitution for host execution, not changes to control flow.
+        payloads["service.sh"] = payloads["service.sh"].replace(
+            b"/system/bin/mount", ('"' + str(self.tools / "mount") + '"').encode()
+        )
         payloads["daemon"] = (
             (MODULE / "daemon").read_text()
             .replace("#!/system/bin/sh", "#!/bin/sh", 1)

@@ -17,10 +17,16 @@ retain `xposed_file`), rather than assuming a root manager's default label. The
 daemon also reasserts the manager APK label if a platform relabel changed it.
 
 `module/service.sh` creates an isolated mount namespace and makes it recursively
-slave before `module/daemon` mounts its resource cache. Namespace or mount
-failure stops the launch; it must never fall back to mounting in the caller's
-namespace. Failed asynchronous launches are reported to stderr and the `Vector`
-logcat tag.
+slave before `module/daemon` mounts its resource cache. It explicitly runs
+Android's `/system/bin/mount -t rootfs -o rslave rootfs /` inside the namespace:
+two operands avoid Toybox's fstab lookup, and an explicit type prevents automatic
+bind mounting. The kernel ignores source/type for this propagation-only operation.
+Do not replace it with BusyBox's `--make-rslave /` or Toybox's `-o rslave / /`;
+the latter can succeed as a bind mount without establishing isolation.
+
+Namespace or mount failure stops the launch; it must never fall back to mounting
+in the caller's namespace. Failed asynchronous launches are reported to stderr
+and the `Vector` logcat tag.
 
 The daemon's `DaemonLock` is the sole singleton authority. Its open kernel file
 lock survives framework restarts and is released on process death, SIGKILL, or
@@ -34,8 +40,9 @@ Enabled module metadata or a library held by Zygisk proves neither daemon health
 nor successful framework injection. Check `Vector`/`VectorDaemon` logcat output
 and the daemon process separately before considering a restart.
 
-Host regression tests (Linux, Python 3, JDK 21, `unzip`, standard shell utilities
-including `sha256sum`; run from the project root):
+Host regression tests (Linux, Python 3, JDK 21, `unzip`, `toybox`, `busybox`,
+`strace`, standard shell utilities including `sha256sum`; run **unprivileged**
+from the project root):
 
 ```sh
 python3 -m unittest discover -s daemon/tests -v
@@ -50,6 +57,13 @@ using Magisk/KernelSU/APatch-style installer environments and all four ABIs. The
 cover checksum rejection, explicit labels, file modes, release/debug VM options,
 and argument preservation. ZIP extraction and checksums are real; root-manager
 helpers, SELinux operations, namespaces, mounts and `app_process` are simulated.
+Mount-parser tests additionally execute real Toybox and BusyBox through `strace`
+syscall injection: every `mount()` is suppressed, but its parsed flags must
+contain `MS_SLAVE|MS_REC`, not `MS_BIND`. These tests refuse root and catch
+false-success argument forms that a shell mock cannot. Override tool paths with
+`VECTOR_TEST_TOYBOX`, `VECTOR_TEST_BUSYBOX` and `VECTOR_TEST_STRACE` if needed.
+Missing tools or unavailable ptrace/syscall injection fail the suite, not skip it.
+
 These tests run before CI packaging, not instead of it. Actual root-manager
 integration, Android/ART execution and physical-device startup remain separate
 validation gates; the host matrix does not certify every ROM or device.

@@ -90,6 +90,11 @@ jobs:
           distribution: temurin
           java-version: 21
 
+      - name: Install real mount-parser test tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y toybox busybox strace
+
       - name: Check daemon lifecycle
         run: |
           python3 -m unittest discover -s daemon/tests -v

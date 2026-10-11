@@ -22,7 +22,9 @@ class ServiceTest(unittest.TestCase):
         self.stale_lock = self.root / "state/.vectord-start"
         self.stale_lock.mkdir(parents=True)
         self.service.write_text(
-            SERVICE.read_text().replace("/data/adb/lspd", str(self.stale_lock.parent))
+            SERVICE.read_text()
+            .replace("/data/adb/lspd", str(self.stale_lock.parent))
+            .replace("/system/bin/mount", '"' + str(self.root / "bin/mount") + '"')
         )
         self.trace = self.root / "trace"
         self.bin = self.root / "bin"
@@ -39,7 +41,7 @@ shift
 exec "$@"
 ''')
         self.command(self.bin / "mount", '''
-[ "$#" = 2 ] && [ "$1" = --make-rslave ] && [ "$2" = / ] || exit 92
+[ "$*" = '-t rootfs -o rslave rootfs /' ] || exit 92
 printf 'mount\\n' >> "$TRACE"
 exit "${MOUNT_RESULT:-0}"
 ''')
