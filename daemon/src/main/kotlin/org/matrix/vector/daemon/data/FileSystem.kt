@@ -646,7 +646,11 @@ object FileSystem {
                 }
                 .onFailure { Log.e(TAG, "Failed to export module scopes", it) }
 
-            // Gather daemon logs
+            // Gather daemon logs, including the synchronous startup record. The latter lives
+            // outside log/log.old so logcat rotation cannot erase the exception that killed a
+            // daemon before its asynchronous reader was ready.
+            addFile("startup.log", basePath.resolve("startup.log").toFile())
+            addFile("startup.log.old", basePath.resolve("startup.log.old").toFile())
             addDir("log", logDirPath.toFile())
             addDir("log.old", oldLogDirPath.toFile())
           }
