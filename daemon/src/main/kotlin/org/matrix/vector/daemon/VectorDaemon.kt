@@ -18,14 +18,14 @@ import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 import org.matrix.vector.daemon.data.ConfigCache
 import org.matrix.vector.daemon.data.FileSystem
 import org.matrix.vector.daemon.env.CliSocketServer
+import org.matrix.vector.daemon.env.CoreServiceGate
 import org.matrix.vector.daemon.env.Dex2OatServer
 import org.matrix.vector.daemon.env.LogcatMonitor
+import org.matrix.vector.daemon.env.StartupLog
 import org.matrix.vector.daemon.ipc.BRIDGE_TRANSACTION_CODE
 import org.matrix.vector.daemon.ipc.ManagerService
 import org.matrix.vector.daemon.ipc.SystemServerService
@@ -47,6 +47,14 @@ object VectorDaemon {
   var isLateInject = false
   var proxyServiceName = "serial"
 
+  private var startupLog: StartupLog? = null
+
+  private fun startupPhase(phase: String) {
+    runCatching { startupLog?.phase(phase) }
+        .onFailure { Log.w(TAG, "Cannot write startup diagnostics", it) }
+    Log.i(TAG, "Startup: $phase")
+  }
+
   @JvmStatic
   fun main(args: Array<String>) {
     val acquired =
@@ -60,6 +68,24 @@ object VectorDaemon {
       Log.i(TAG, "Another daemon owns the lock; skipping duplicate launch")
       kotlin.system.exitProcess(0)
     }
+
+    // Only the lock owner rotates these files. They survive logcat initialization/rotation and
+    // retain the stack Android deliberately suppresses when the cause is DeadSystemException.
+    startupLog =
+        runCatching { StartupLog.open(FileSystem.basePath) }
+            .onFailure { Log.w(TAG, "Cannot open startup diagnostics", it) }
+            .getOrNull()
+    Thread.setDefaultUncaughtExceptionHandler { thread, error ->
+      try {
+        runCatching { startupLog?.failure(thread, error) }
+        val stack = error.stackTraceToString()
+        System.err.println("Vector: fatal on ${thread.name}\n$stack")
+        Log.e(TAG, "Uncaught exception in Daemon on ${thread.name}\n$stack")
+      } finally {
+        kotlin.system.exitProcess(1)
+      }
+    }
+    startupPhase("locked; version ${BuildConfig.VERSION_CODE} commit ${BuildConfig.VERSION_HASH}")
 
     var systemServerMaxRetry = 1
     for (arg in args) {
@@ -79,37 +105,37 @@ object VectorDaemon {
         "Version ${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE}) " +
             "commit ${BuildConfig.VERSION_HASH}")
 
-    Thread.setDefaultUncaughtExceptionHandler { _, e ->
-      Log.e(TAG, "Uncaught exception in Daemon", e)
-      kotlin.system.exitProcess(1)
-    }
-
     // Setup Main Looper
+    startupPhase("prepare main looper")
     Process.setThreadPriority(Process.THREAD_PRIORITY_FOREGROUND)
     @Suppress("DEPRECATION") Looper.prepareMainLooper()
 
     // Squat on the proxy service name immediately, which creates the early IPC channel of
     // FrameworkService for our Zygisk module during system_server specialization.
+    startupPhase("register early proxy $proxyServiceName")
     SystemServerService.registerProxyService(proxyServiceName)
 
     // Start Environmental Daemons
+    startupPhase("start logcat monitor")
     LogcatMonitor.start()
+    startupPhase("start environmental services")
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) Dex2OatServer.start()
     CliSocketServer.start()
 
     // Preload Framework DEX in the background
     scope.launch { FileSystem.getPreloadDex(ConfigCache.state.isDexObfuscateEnabled) }
 
-    // Initializes system frameworks inside the daemon process
+    // ActivityThread initialization can call into system_server. Do not do it before the core
+    // services exist, or accept dead cached Binders during a concurrent framework restart.
+    // The specialization proxy stays early: it must not wait on system_server itself.
+    awaitLiveCoreServices()
+    startupPhase("initialize ActivityThread")
+    // A Binder can still die after the readiness check. Do not retry partially initialized
+    // ActivityThread state; the uncaught handler records the phase and full stack before exit.
     ActivityThread.systemMain()
     DdmHandleAppName.setAppName("org.matrix.vector.daemon", 0)
 
-    // Wait for Android core services
-    waitForSystemService("package")
-    waitForSystemService("activity") // current bridgeServiceName
-    waitForSystemService(Context.USER_SERVICE)
-    waitForSystemService(Context.APP_OPS_SERVICE)
-
+    startupPhase("notification workaround")
     applyNotificationWorkaround()
 
     // Read this before `sendToBridge`, which leaves the main thread at euid 1000: the config
@@ -117,24 +143,37 @@ object VectorDaemon {
     // to do so while we still have root. On a successful injection a binder thread opens it for
     // us during specialization, but when the injection fails nothing else has, and the daemon
     // used to die here on an unreadable preference.
+    startupPhase("read preferences")
     val isVerboseLog = ManagerService.isVerboseLogEnabled()
 
     // Setup IPC channel for applications by injecting DaemonService binder
+    startupPhase("inject application bridge")
     sendToBridge(VectorService.asBinder(), false, systemServerMaxRetry)
 
     if (!isVerboseLog) {
       LogcatMonitor.stopVerbose()
     }
 
+    // This means the event loop is ready, not that the bridge injection succeeded.
+    startupPhase("enter main loop")
     Looper.loop()
     throw RuntimeException("Main thread loop unexpectedly exited")
   }
 
-  private fun waitForSystemService(name: String) = runBlocking {
-    while (ServiceManager.getService(name) == null) {
-      Log.i(TAG, "Waiting system service: $name for 1s")
-      delay(1000)
-    }
+  private fun awaitLiveCoreServices() {
+    startupPhase("wait for live core services")
+    CoreServiceGate.awaitReady(
+        arrayOf("package", bridgeServiceName, Context.USER_SERVICE, Context.APP_OPS_SERVICE),
+        { name ->
+          val service = ServiceManager.getService(name)
+          val alive = service?.pingBinder() == true
+          if (service != null && !alive) clearSystemCaches()
+          alive
+        },
+        { name ->
+          Log.i(TAG, "Waiting system service: $name for 1s")
+          Thread.sleep(1000)
+        })
   }
 
   // The bridge is setup in `system_server` via Zygisk API
