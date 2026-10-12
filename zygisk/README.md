@@ -36,6 +36,21 @@ could allow two owners to lock different inodes. Process names and historical
 is a successful duplicate no-op; lock I/O errors are logged and exit nonzero.
 There is no automatic launcher retry/reboot loop.
 
+The Java daemon registers its specialization proxy early, then waits for live
+core-service Binders before initializing `ActivityThread`. After any readiness
+wait it checks the whole service set again. This is not an atomic guarantee of
+framework health; if initialization subsequently fails it exits rather than
+retrying partially initialized Android state. This gate adds no framework restart.
+
+Only the lock owner opens `/data/adb/lspd/startup.log`, retaining the preceding
+launch as `startup.log.old`. Each record is limited to 128 KiB with mode `0600`;
+half the budget is reserved for fatal stacks. Phases and uncaught exceptions are
+written synchronously through an owned descriptor, independently of logd and
+`log`/`log.old` rotation. The manager's diagnostic export includes both files.
+If log creation fails, a warning goes to logcat; failure to record diagnostics
+does not grant a duplicate daemon ownership or hide a fatal exit. Read these
+files as root without deleting the lock or restarting Android to collect them.
+
 Enabled module metadata or a library held by Zygisk proves neither daemon health
 nor successful framework injection. Check `Vector`/`VectorDaemon` logcat output
 and the daemon process separately before considering a restart.
@@ -50,7 +65,11 @@ python3 -m unittest discover -s zygisk/tests -v
 ```
 
 The lock tests compile the production Java class and use separate JVMs, including
-concurrent contenders and SIGKILL recovery. Launcher tests mock namespace/mount
+concurrent contenders and SIGKILL recovery. Startup helper tests compile the real
+Java classes and cover service-set rechecks, interruption/error propagation,
+log rotation, limits, permissions, complete exception chains and descriptor-based
+writes. Source wiring guards check initialization order but do not execute Android.
+Launcher tests mock namespace/mount
 commands and never mount anything on the host. The standalone installation tests
 execute `customize.sh` → `service.sh` → `daemon` without any companion package,
 using Magisk/KernelSU/APatch-style installer environments and all four ABIs. They
