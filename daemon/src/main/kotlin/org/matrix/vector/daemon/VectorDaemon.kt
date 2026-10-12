@@ -78,9 +78,8 @@ object VectorDaemon {
     Thread.setDefaultUncaughtExceptionHandler { thread, error ->
       try {
         runCatching { startupLog?.failure(thread, error) }
-        val stack = error.stackTraceToString()
-        System.err.println("Vector: fatal on ${thread.name}\n$stack")
-        Log.e(TAG, "Uncaught exception in Daemon on ${thread.name}\n$stack")
+        System.err.println("Vector: fatal on ${thread.name}: ${error.message}")
+        Log.e(TAG, "Uncaught exception in Daemon on ${thread.name}", error)
       } finally {
         kotlin.system.exitProcess(1)
       }
