@@ -20,6 +20,7 @@ package org.apache.commons.lang3;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.Test;
@@ -69,11 +70,22 @@ class JavaVersionTest extends AbstractLangTest {
         assertEquals(JavaVersion.JAVA_25, JavaVersion.get("25"));
         assertEquals(JavaVersion.JAVA_26, JavaVersion.get("26"));
         assertEquals(JavaVersion.JAVA_27, JavaVersion.get("27"));
+        assertEquals(JavaVersion.JAVA_28, JavaVersion.get("28"));
+    }
+
+    @Test
+    void testGetJavaVersionMalformed() throws Exception {
         // Failures
         assertEquals(JavaVersion.JAVA_RECENT, JavaVersion.get("1.10"), "1.10 failed");
         // assertNull("2.10 unexpectedly worked", JavaVersion.get("2.10"));
         assertEquals(JavaVersion.get("1.5"), JavaVersion.getJavaVersion("1.5"), "Wrapper method failed");
         assertEquals(JavaVersion.JAVA_RECENT, JavaVersion.get("99"), "Unhandled"); // LANG-1384
+        // Unknown or malformed versions must return null per the Javadoc, never throw
+        // (a NumberFormatException here poisons SystemUtils' static initializer).
+        assertNull(JavaVersion.get("1."));
+        assertNull(JavaVersion.get("bogus"));
+        assertNull(JavaVersion.get("1.x"));
+        assertNull(JavaVersion.get(""));
     }
 
     @Test

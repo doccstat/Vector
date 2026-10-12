@@ -1461,6 +1461,31 @@ class StringUtilsTest extends AbstractLangTest {
         assertEquals("abcdefzzzz", StringUtils.overlay("abcdef", "zzzz", 10, 8));
     }
 
+    @Test
+    void testOverlaySurrogatePair() {
+        final String grin = "😀";
+        // overlaying across surrogate pair boundary backs off start and advances end
+        assertEquals("X", StringUtils.overlay(grin, "X", 1, 1));
+        assertEquals("aXb", StringUtils.overlay("a" + grin + "b", "X", 1, 3));
+        assertEquals("aXb", StringUtils.overlay("a" + grin + "b", "X", 2, 2));
+
+        final String source = "a" + grin + "b" + grin + "cd" + grin + "ef";
+        for (int start = 0; start <= source.length(); start++) {
+            for (int end = 0; end <= source.length(); end++) {
+                final String result = StringUtils.overlay(source, "X", start, end);
+                for (int i = 0; i < result.length(); i++) {
+                    final char ch = result.charAt(i);
+                    if (Character.isHighSurrogate(ch)) {
+                        assertTrue(i + 1 < result.length() && Character.isLowSurrogate(result.charAt(i + 1)), "lone high surrogate in: " + result);
+                        i++; // skip the paired low surrogate
+                    } else {
+                        assertFalse(Character.isLowSurrogate(ch), "lone low surrogate in: " + result);
+                    }
+                }
+            }
+        }
+    }
+
     /**
      * Tests {@code prependIfMissing}.
      */
@@ -1869,8 +1894,9 @@ class StringUtilsTest extends AbstractLangTest {
         assertThrows(IllegalStateException.class,
                 () -> StringUtils.replaceEachRepeatedly("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", new String[] { "aa" }, new String[] { "a" }),
                 "Cannot be resolved within the default time-to-live limit");
-        // Test larger TTL for larger search lists. Replace repeatedly until there are no more possible replacements.
-        assertEquals("000000000", StringUtils.replaceEachRepeatedly("aA0aA0aA0",
+        // The iteration budget is a fixed constant (no longer derived from the search-list size, which let the
+        // input choose the recursion depth): a 61-step replacement chain exceeds the budget and aborts.
+        assertThrows(IllegalStateException.class, () -> StringUtils.replaceEachRepeatedly("aA0aA0aA0",
                 new String[]{"a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n",
                         "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z", "A", "B", "C", "D",
                         "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T",
@@ -1878,7 +1904,8 @@ class StringUtilsTest extends AbstractLangTest {
                 new String[]{"b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o",
                         "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z", "A", "B", "C", "D", "E",
                         "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U",
-                        "V", "W", "X", "Y", "Z", "1", "2", "3", "4", "5", "6", "7", "8", "9", "0"}));
+                        "V", "W", "X", "Y", "Z", "1", "2", "3", "4", "5", "6", "7", "8", "9", "0"}),
+                "Cannot be resolved within the fixed time-to-live limit");
 
         // Test long infinite cycle: a -> b -> ... -> 9 -> 0 -> a -> b -> ...
         assertThrows(IllegalStateException.class,
@@ -3006,7 +3033,7 @@ class StringUtilsTest extends AbstractLangTest {
     /**
      * Tests {@link StringUtils#toString(byte[], String)}
      *
-     * @throws UnsupportedEncodingException because the method under test max throw it
+     * @throws UnsupportedEncodingException Thrown if the method under test throws an exception.
      * @see StringUtils#toString(byte[], String)
      */
     @Test

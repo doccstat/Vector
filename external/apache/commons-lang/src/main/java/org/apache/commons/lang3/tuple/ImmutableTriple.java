@@ -21,11 +21,15 @@ import java.util.Objects;
 /**
  * An immutable triple consisting of three {@link Object} elements.
  *
- * <p>Although the implementation is immutable, there is no restriction on the objects
+ * <p>
+ * Although the implementation is immutable, there is no restriction on the objects
  * that may be stored. If mutable objects are stored in the triple, then the triple
- * itself effectively becomes mutable.</p>
+ * itself effectively becomes mutable.
+ * </p>
  *
- * <p>#ThreadSafe# if all three objects are thread-safe.</p>
+ * <p>
+ * #ThreadSafe# if all three objects are thread-safe.
+ * </p>
  *
  * @param <L> The left element type.
  * @param <M> The middle element type.
@@ -107,7 +111,7 @@ public class ImmutableTriple<L, M, R> extends Triple<L, M, R> {
      * @param middle  The middle element, may not be null.
      * @param right  The right element, may not be null.
      * @return An immutable triple formed from the three parameters, not null.
-     * @throws NullPointerException if any input is null.
+     * @throws NullPointerException Thrown if any input is null.
      * @since 3.13.0
      */
     public static <L, M, R> ImmutableTriple<L, M, R> ofNonNull(final L left, final M middle, final R right) {

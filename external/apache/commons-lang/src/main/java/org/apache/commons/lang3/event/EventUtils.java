@@ -24,6 +24,7 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
 
+import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.reflect.MethodUtils;
 
 /**
@@ -52,7 +53,7 @@ public class EventUtils {
         }
 
         /**
-         * Checks whether a method for the passed in parameters can be found.
+         * Tests whether a method for the passed in parameters can be found.
          *
          * @param method The listener method invoked.
          * @return A flag whether the parameters could be matched.
@@ -68,12 +69,26 @@ public class EventUtils {
          * @param method The method to be invoked.
          * @param parameters The parameters for the method invocation.
          * @return The result of the method call.
-         * @throws SecurityException if an underlying accessible object's method denies the request.
+         * @throws SecurityException Thrown if an underlying accessible object's method denies the request.
          * @see SecurityManager#checkPermission
-         * @throws Throwable if an error occurs
+         * @throws Throwable Thrown if an error occurs.
          */
         @Override
         public Object invoke(final Object proxy, final Method method, final Object[] parameters) throws Throwable {
+            if (method.getDeclaringClass() == Object.class) {
+                // Handle Object methods locally instead of dispatching them to the bound target,
+                // mirroring java.beans.EventHandler: routine host actions (hash-based collections,
+                // logging, equality checks during listener de-registration) must not invoke the
+                // target method and must not return null into an unboxing context.
+                switch (method.getName()) {
+                case "hashCode":
+                    return Integer.valueOf(System.identityHashCode(proxy));
+                case "equals":
+                    return Boolean.valueOf(proxy == parameters[0]);
+                default: // toString
+                    return ObjectUtils.identityToString(proxy);
+                }
+            }
             if (eventTypes.isEmpty() || eventTypes.contains(method.getName())) {
                 if (hasMatchingParametersMethod(method)) {
                     return MethodUtils.invokeMethod(target, methodName, parameters);
@@ -92,7 +107,7 @@ public class EventUtils {
      * @param listenerType  The event listener type.
      * @param listener      The listener.
      * @param <L>           the event listener type.
-     * @throws IllegalArgumentException if the object doesn't support the listener type.
+     * @throws IllegalArgumentException Thrown if the object doesn't support the listener type.
      */
     public static <L> void addEventListener(final Object eventSource, final Class<L> listenerType, final L listener) {
         try {

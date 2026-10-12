@@ -44,7 +44,12 @@ The <action> type attribute can be add,update,fix,remove.
     <title>Apache Commons Lang Release Notes</title>
   </properties>
   <body>
-  <release version="3.21.0" date="YYY-MM-DD" description="This is a feature and maintenance release. Java 8 or later is required.">
+  <release version="3.21.1" date="YYYY-MM-DD" description="This is a feature and maintenance release. Java 8 or later is required.">
+    <!-- FIX -->
+    <!-- ADD -->
+    <!-- UPDATE -->
+  </release>
+  <release version="3.21.0" date="2026-09-25" description="This is a feature and maintenance release. Java 8 or later is required.">
     <!-- FIX -->
     <action                   type="fix" dev="ggregory" due-to="Javid Khan, Gary Gregory">Stop ExtendedMessageFormat seekNonWs reading past the pattern end.</action>
     <action                   type="fix" dev="ggregory" due-to="ThrawnCA">Fix spelling and grammar in StringUtils #1486.</action>
@@ -128,16 +133,16 @@ The <action> type attribute can be add,update,fix,remove.
     <action                   type="fix" dev="ggregory" due-to="Lars Helge Øverland, Gary Gregory">Fix StopWatch's stopInstant match stopTimeNanos when split is called #1610.</action>
     <action                   type="fix" dev="ggregory" due-to="Gary Gregory">Fix NullPointerException in StopWatch.getStopTime().</action>
     <action                   type="fix" dev="ggregory" due-to="Volkmar W. Pogatzki, Gary Gregory">Add "ppc64le" to ArchUtils #1625. See https://bugs.gentoo.org/972590
-Bug 972590 - dev-java/commons-lang-3.20.0:
-java.lang.NullPointerException: Cannot invoke
-"org.apache.commons.lang3.arch.Processor.toString()" because "&lt;local1&gt;"</action>
+      Bug 972590 - dev-java/commons-lang-3.20.0:
+      java.lang.NullPointerException: Cannot invoke
+      "org.apache.commons.lang3.arch.Processor.toString()" because "&lt;local1&gt;"</action>
     <action issue="LANG-1821" type="fix" dev="ggregory" due-to="FloydDsilva, Gary Gregory, Rob Tompkins">NumberUtils.isCreatable(String) should match NumberUtils.createNumber(String), exactly #1626.</action>
     <action                   type="fix" dev="ggregory" due-to="尹茂椿萱, Gary Gregory">NumberUtils.isCreatable fails for hexadecimal numbers with long type qualifier.</action>
     <action                   type="fix" dev="ggregory" due-to="ax1nch, Gary Gregory">NumberUtils.createNumber() performance: Short-circuit check based on pre-derived candidate Double #1628.</action>
     <action issue="LANG-1823" type="fix" dev="ggregory" due-to="尹茂椿萱, Gary Gregory">LocaleUtils.toLocale cannot parse valid JDK Locale string containing '#' #1630.</action>
     <action issue="LANG-879"  type="fix" dev="ggregory" due-to="Matthew T. Adams, Gary Gregory">LocaleUtils test fails with new Locale "ja_JP_JP_#u-ca-japanese" of JDK7.</action>
     <action                   type="fix" dev="ggregory" due-to="Omkhar Arasaratnam, Gary Gregory">Fix typo in SystemProperties.JDK_XML_ENTITY_REPLACEMENT_LIMIT (#1631).</action>
-    <action                   type="fix" dev="ggregory" due-to="Omkhar Arasaratnam, Gary Gregory">Harden Range.readObject() to reject bad cached hash code (#1633).</action>
+    <action                   type="fix" dev="ggregory" due-to="Omkhar Arasaratnam, Gary Gregory">Recompute Range cached hash codes on deserialization while retaining endpoint and comparator validation (#1633).</action>
     <action                   type="fix" dev="ggregory" due-to="Omkhar Arasaratnam, Gary Gregory">Harden Fraction.readObject() to reject bad cached hash code (#1634).</action>
     <action                   type="fix" dev="ggregory" due-to="Omkhar Arasaratnam, Gary Gregory">NumberUtils.createNumber(String): Float shortcut can bypass exact decimal parsing (#1635).</action>
     <action                   type="fix" dev="ggregory" due-to="Omkhar Arasaratnam, Gary Gregory">StringUtils.joins() for primitive types can throw OOME before index check (#1636).</action>
@@ -246,10 +251,54 @@ java.lang.NullPointerException: Cannot invoke
     <action                   type="fix" dev="ggregory" due-to="codeAnqiang-ma, Gary Gregory">Fix the month/day example in DurationFormatUtils.formatPeriod Javadoc (#1772).</action>
     <action                   type="fix" dev="ggregory" due-to="gaurav kumar pandey, Gary Gregory">Fix typos in Javadoc and example comments (#1774).</action>
     <action                   type="fix" dev="ggregory" due-to="alhuda, Gary Gregory">Fix CharRange.contains(CharRange) for negated argument ranges (#1775).</action>
+    <action                   type="fix" dev="ggregory" due-to="Gary Gregory">Fix SpotBugs USO_UNSAFE_METHOD_SYNCHRONIZATION in CharSet.</action>
+    <action                   type="fix" dev="ggregory" due-to="alhuda, Gary Gregory">Keep StopWatch.formatSplitTime from clamping splits to int millis (#1777).</action>
+    <action                   type="fix" dev="ggregory" due-to="gaurav kumar pandey, Gary Gregory">Keep StringUtils left, right, mid, and overlay off surrogate pair boundaries (#1776).</action>
+    <action                   type="fix" dev="ggregory" due-to="Gaurav Pandey, Gary Gregory">Align ReflectionDiffBuilder with AbstractReflection and add cycle detection to prevent StackOverflowError on cyclic object graphs.</action>
+    <action                   type="fix" dev="ggregory" due-to="gaurav kumar pandey, Gary Gregory">Fix DurationFormatUtils.formatPeriod() calculation when pattern omits 'M' (#1780).</action>
+    <action                   type="fix" dev="ggregory" due-to="Gary Gregory">FastDateParser parses 'Y' (week year) as plain calendar year; asymmetric with FastDatePrinter and with SimpleDateFormat; boundary dates shift by a full year, silently (f002).</action>
+    <action                   type="fix" dev="ggregory" due-to="Gary Gregory">UnicodeUnescaper.unescapeJava/EcmaScript/Json: malformed \u sequences throw undeclared IllegalArgumentException, AND non-ASCII digit spellings of \u escapes are silently accepted; both arms of one missing ASCII-hex prescan (f004).</action>
+    <action                   type="fix" dev="ggregory" due-to="Gary Gregory">StringUtils.replaceEachRepeatedly derives its recursion budget from the input itself; the documented StackOverflowError protection fails on large tables, and expanding rules amplify text 64x even at the default TTL (f005).</action>
+    <action                   type="fix" dev="ggregory" due-to="Gary Gregory">EventUtils.EventBindingInvocationHandler.invoke() dispatches Object.hashCode/equals/toString into the bound business method (empty-eventTypes default), or returns null -> NPE from hash collections (non-empty) (f006).</action>
+    <action                   type="fix" dev="ggregory" due-to="Gary Gregory">LocaleUtils static caches no longer grows on invalid input to LocaleUtils.countriesByLanguage(String) (f007).</action>
+    <action                   type="fix" dev="ggregory" due-to="Gary Gregory">LocaleUtils static caches no longer grows on invalid input to LocaleUtils.countriesByLanguage(String) (f007).</action>
+    <action                   type="fix" dev="ggregory" due-to="Gary Gregory">ExtendedMessageFormat.applyPattern() is quadratic: full pattern.toCharArray() per token (f008).</action>
+    <action                   type="fix" dev="ggregory" due-to="Gary Gregory">WordUtils.wrap(wrapLongWords=false, the 2-arg default) copies the entire remaining string every iteration. (f009).</action>
+    <action                   type="fix" dev="ggregory" due-to="Gary Gregory">FastDateParser.parse throws undeclared IllegalArgumentException, NullPointerException, and IllegalStateException on crafted date strings (f010).</action>
+    <action                   type="fix" dev="ggregory" due-to="Gary Gregory">Memoizer: default caches the first failure forever, has no size bound or eviction, and runs the user computation inside the ConcurrentHashMap bin lock (blocking unrelated keys, deadlocking reentrant use) (f011).</action>
+    <action                   type="fix" dev="ggregory" due-to="Gary Gregory">StringEscapeUtils.escapeEcmaScript() misses backtick/template-literal (`, ${) and inline-script parser-state sequences (&lt;!--, &lt;script) - claim 'Deals correctly with quotes' is falsified by ES6 (f012).</action>
+    <action                   type="fix" dev="ggregory" due-to="Gary Gregory">StrSubstitutor (deprecated) recursive expansion has a cycle check but no fan-out, depth, or size bound (f013).</action>
+    <action                   type="fix" dev="ggregory" due-to="Gary Gregory">DurationFormatUtils.formatPeriod walks the calendar one year per iteration, Long.MAX_VALUE endMillis forces ~292 million Calendar round trips on one thread (f014).</action>
+    <action                   type="fix" dev="ggregory" due-to="Gary Gregory">JavaVersion.get() throws NumberFormatException where javadoc promises null (f015).</action>
+    <action                   type="fix" dev="ggregory" due-to="Gary Gregory">Match Javadoc to code in SystemProperties.getProperty() and SystemUtils.getEnvironmentVariable() and update inline comments (f016).</action>
+    <action                   type="fix" dev="ggregory" due-to="Gary Gregory">Fix LockingVisitors Javadoc to match code (f017).</action>
+    <action                   type="fix" dev="ggregory" due-to="Gary Gregory">DoubleRange/Range accept NaN endpoints, silently producing a half-unbounded range, contains()/fit() fail open for every value above the minimum (f018).</action>
+    <action                   type="fix" dev="ggregory" due-to="Gary Gregory">BitField long-mask fields silently mis-answer int/short/byte accessors: shifts masked mod 32, and sign extension makes above-bit-31 flags read as set on any negative holder (f019).</action>
+    <action                   type="fix" dev="ggregory" due-to="Gary Gregory">ClassUtils.getClass() name normalization (whitespace stripping + dot-to-dollar rewriting) defeats host-side class-name string checks (f020).</action>
+    <action                   type="fix" dev="ggregory" due-to="Gary Gregory">Fraction.getFraction(String) throws undeclared ArithmeticException on crafted numeric strings ('9999999999.5', '1/0', mixed-number overflow) (f021).</action>
+    <action                   type="fix" dev="ggregory" due-to="Gary Gregory">StringEscapeUtils.escapeHtml4/3 apostrophe gap: single-quoted and unquoted HTML attribute contexts are trivially breakable, and the javadoc discloses the gap only as an HTML4 entity-legality footnote (f022).</action>
+    <action                   type="fix" dev="ggregory" due-to="Gary Gregory">ArrayUtils.addAll/insert length arithmetic overflows (undeclared NegativeArraySizeException) while sibling concat is overflow-checked (f023).</action>
+    <action                   type="fix" dev="ggregory" due-to="Gary Gregory">FormattableUtils.append pads right-justified output with insert(0) per char; O(width^2); '%500000s' costs ~1.25e11 char moves (f024).</action>
+    <action                   type="fix" dev="ggregory" due-to="Gary Gregory">Attacker-controlled exception message forges frames in getRootCauseStackTrace output AND suppresses all real frames, beyond cosmetic log spoofing (f025).</action>
+    <action                   type="fix" dev="ggregory" due-to="Gary Gregory">StrBuilder.indexOf materializes the whole builder as a String per call; deleteAll/replaceAll multiply it into ~750 GB churn on a 1 MB builder (f026).</action>
+    <action                   type="fix" dev="ggregory" due-to="Gary Gregory">ThresholdCircuitBreaker accepts negative increments and overflows its accumulator, silently keeping the breaker closed (f027).</action>
+    <action                   type="fix" dev="ggregory" due-to="Gary Gregory">ExceptionUtils.getThrowableList() cycle check is O(n^2) over deep cause chains; all chain-walking consumers inherit it (f031).</action>
+    <action                   type="fix" dev="ggregory" due-to="Gary Gregory">Reflection builders' cycle registry unregisters per-visit: cycle-SAFE but DAG-exponential, a 40-level reference diamond drives ~2^40 traversals and unbounded output (f032).</action>
+    <action                   type="fix" dev="ggregory" due-to="Gary Gregory">FastDateFormat static caches grow without bound per distinct pattern/zone/locale, untrusted patterns pin several KB each, forever (f033).</action>
+    <action                   type="fix" dev="ggregory" due-to="Jeff Lenamon, Gary Gregory">Fix Fraction.add and subtract for operands not in lowest terms (#1784).</action>
+    <action                   type="fix" dev="ggregory" due-to="Jeff Lenamon, Gary Gregory">Fix MethodUtils.invokeMethod on instances of non-public classes (#1783).</action>
+    <action                   type="fix" dev="ggregory" due-to="Jeff Lenamon, Gary Gregory">Fraction.add and subtract return the reduced form when an operand is zero (#1787).</action>
+    <action                   type="fix" dev="ggregory" due-to="alhuda, Gary Gregory">Return null for out-of-range offset in FastTimeZone.getGmtTimeZone (#1788).</action>
+    <action                   type="fix" dev="ggregory" due-to="gaurav kumar pandey, Gary Gregory">Fix TypeUtils.toString() recursion and bound handling on recursive generic types (#1789).</action>
+    <action                   type="fix" dev="ggregory" due-to="尹茂椿萱, makarandhinge, Gary Gregory" issue="LANG-1834">Fix Fraction reduction for Integer.MIN_VALUE (#1794).</action>
+    <action                   type="fix" dev="ggregory" due-to="alhuda, Gary Gregory">Defensively clone the TimeZone in FastDatePrinter and FastDateParser (#1795).</action>
+    <action                   type="fix" dev="ggregory" due-to="Gary Gregory">Defensively clone time zones used as FastDateFormat cache keys to prevent caller mutations from returning formatters with stale time zone rules.</action>
+    <action                   type="fix" dev="ggregory" due-to="gaurav kumar pandey, Gary Gregory">Fix ConstructorUtils.getMatchingAccessibleConstructor on non-public classes (#1793).</action>
+    <action                   type="fix" dev="ggregory" due-to="gaurav kumar pandey, Gary Gregory">Fix NumberUtils.createNumber() and isCreatable() for positive Long literals with explicit '+' sign (#1796).</action>
     <!-- ADD -->
     <action                   type="add" dev="ggregory" due-to="Gary Gregory">Add JavaVersion.JAVA_27.</action>
     <action                   type="add" dev="ggregory" due-to="Gary Gregory">Add SystemUtils.IS_JAVA_27.</action>
-    <action                   type="add" dev="ggregory" due-to="Gary Gregory">JavaVersion.get(String) now support Java 26 and 27.</action>
+    <action                   type="add" dev="ggregory" due-to="Gary Gregory">JavaVersion.get(String) now support Java 26, 27 and 28.</action>
     <action issue="LANG-1810" type="add" dev="ggregory" due-to="Yelim Koo, Gary Gregory">Deprecate ArrayUtils.SOFT_MAX_ARRAY_LENGTH in favor of SAFE_MAX_ARRAY_LENGTH #1559.</action>
     <action                   type="add" dev="ggregory" due-to="Gary Gregory, Theodora Anastasia Lazaridou">Add long support to BitField #1561.</action>
     <action                   type="add" dev="ggregory" due-to="Gary Gregory">Add ArrayUtils.getDimensions(Object).</action>
@@ -266,8 +315,15 @@ java.lang.NullPointerException: Cannot invoke
     <action                   type="add" dev="ggregory" due-to="Gary Gregory">Add and use Instants.toInstant(Instant[, Instant]) (#1690).</action>
     <action issue="LANG-1833" type="add" dev="ggregory" due-to="Maksym Korshun">Handle ParsePosition index beyond source string length cleanly (#1757).</action>
     <action                   type="fix" dev="ggregory" due-to="alhudz, Gary Gregory">Fix StrBuilder.lastIndexOf(String) start index for an empty search (#1759).</action>
+    <action                   type="fix" dev="ggregory" due-to="alhudz, Gary Gregory">Fix int overflow in Conversion count and position bounds guards (#1779).</action>
+    <action                   type="add" dev="ggregory" due-to="Gary Gregory">Add ClassUtils.getClassStrict(ClassLoader, String, boolean) (f020).</action>
+    <action                   type="add" dev="ggregory" due-to="Gary Gregory">Add ClassUtils.getClassStrict(String) (f020).</action>
+    <action                   type="add" dev="ggregory" due-to="Gary Gregory, gaurav kumar pandey">Fix TypeUtils.isAssignable() for wildcards with multiple upper bounds (#1782).</action>
+    <action                   type="add" dev="ggregory" due-to="Gary Gregory">Add JavaVersion.JAVA_28.</action>
+    <action                   type="add" dev="ggregory" due-to="Gary Gregory">Add SystemUtils.IS_JAVA_28.</action>
+    <action                   type="fix" dev="ggregory" due-to="Gary Gregory">Preserve serialization compatibility with 3.20.0 for Range, IntegerRange, LongRange, and DoubleRange by retaining Range serialVersionUID 1L. Streams written by 3.21.0 RC1 with UID 2L require reading with RC1 and exporting endpoint and comparator values before rebuilding ranges with this release.</action>
     <!-- UPDATE -->
-    <action                   type="update" dev="ggregory" due-to="Gary Gregory, Dependabot">Bump org.apache.commons:commons-parent from 92 to 103 #1498.</action>
+    <action                   type="update" dev="ggregory" due-to="Gary Gregory, Dependabot">Bump org.apache.commons:commons-parent from 92 to 105 #1498.</action>
     <action                   type="update" dev="ggregory" due-to="Gary Gregory">[test] Bump org.apache.commons:commons-text from 1.14.0 to 1.15.0.</action>
   </release>
   <release version="3.20.0" date="2025-11-12" description="This is a feature and maintenance release. Java 8 or later is required.">

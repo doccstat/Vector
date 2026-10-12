@@ -19,12 +19,15 @@ package org.apache.commons.lang3.builder;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.Objects;
+import java.util.Set;
 
 import org.apache.commons.lang3.ArraySorter;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.ClassUtils;
 import org.apache.commons.lang3.reflect.FieldUtils;
+import org.apache.commons.lang3.tuple.Pair;
 
 /**
  * Assists in implementing {@link Diffable#diff(Object)} methods.
@@ -73,9 +76,10 @@ import org.apache.commons.lang3.reflect.FieldUtils;
  * @see DiffResult
  * @see ToStringStyle
  * @see DiffBuilder
+ * @see AbstractBuilder#setForceAccessible(boolean)
  * @since 3.6
  */
-public class ReflectionDiffBuilder<T> implements Builder<DiffResult<T>> {
+public class ReflectionDiffBuilder<T> extends AbstractReflection implements Builder<DiffResult<T>> {
 
     /**
      * Constructs a new instance.
@@ -83,7 +87,7 @@ public class ReflectionDiffBuilder<T> implements Builder<DiffResult<T>> {
      * @param <T> type of the left and right object.
      * @since 3.15.0
      */
-    public static final class Builder<T> {
+    public static final class Builder<T> extends AbstractBuilder<Builder<T>> {
 
         private String[] excludeFieldNames = ArrayUtils.EMPTY_STRING_ARRAY;
         private DiffBuilder<T> diffBuilder;
@@ -101,7 +105,12 @@ public class ReflectionDiffBuilder<T> implements Builder<DiffResult<T>> {
          * @return A new configured {@link ReflectionDiffBuilder}.
          */
         public ReflectionDiffBuilder<T> build() {
-            return new ReflectionDiffBuilder<>(diffBuilder, excludeFieldNames);
+            return new ReflectionDiffBuilder<>(this);
+        }
+
+        @Override
+        public ReflectionDiffBuilder<T> get() {
+            return build();
         }
 
         /**
@@ -129,6 +138,11 @@ public class ReflectionDiffBuilder<T> implements Builder<DiffResult<T>> {
     }
 
     /**
+     * A registry of objects to detect cyclical object references, avoid infinite loops, and stack overflows.
+     */
+    private static final ThreadLocal<Set<Pair<IDKey, IDKey>>> REGISTRY = ThreadLocal.withInitial(HashSet::new);
+
+    /**
      * Constructs a new {@link Builder}.
      *
      * @param <T> type of the left and right object.
@@ -139,12 +153,63 @@ public class ReflectionDiffBuilder<T> implements Builder<DiffResult<T>> {
         return new Builder<>();
     }
 
+    /**
+     * Gets the registry of object pairs being traversed by the reflection
+     * methods in the current thread.
+     *
+     * @return Set the registry of objects being traversed
+     */
+    static Set<Pair<IDKey, IDKey>> getRegistry() {
+        return REGISTRY.get();
+    }
+
+    /**
+     * Tests whether the registry contains the given object pair.
+     * <p>
+     * Used by the reflection methods to avoid infinite loops.
+     * Objects might be swapped therefore a check is needed if the object pair
+     * is registered in the given or swapped order.
+     * </p>
+     *
+     * @param lhs {@code this} object to lookup in registry
+     * @param rhs The other object to lookup on registry
+     * @return boolean {@code true} if the registry contains the given object.
+     */
+    static boolean isRegistered(final Object lhs, final Object rhs) {
+        return isRegistered(lhs, rhs, getRegistry());
+    }
+
+    /**
+     * Registers the given object pair.
+     * Used by the reflection methods to avoid infinite loops.
+     *
+     * @param lhs {@code this} object to register
+     * @param rhs the other object to register
+     */
+    static void register(final Object lhs, final Object rhs) {
+        register(lhs, rhs, getRegistry());
+    }
+
     private static String[] toExcludeFieldNames(final String[] excludeFieldNames) {
         if (excludeFieldNames == null) {
             return ArrayUtils.EMPTY_STRING_ARRAY;
         }
         // clone and remove nulls
         return ArraySorter.sort(ReflectionToStringBuilder.toNoNullStringArray(excludeFieldNames));
+    }
+
+    /**
+     * Unregisters the given object pair.
+     *
+     * <p>
+     * Used by the reflection methods to avoid infinite loops.
+     * </p>
+     *
+     * @param lhs {@code this} object to unregister
+     * @param rhs the other object to unregister
+     */
+    static void unregister(final Object lhs, final Object rhs) {
+        unregister(lhs, rhs, getRegistry(), REGISTRY);
     }
 
     private final DiffBuilder<T> diffBuilder;
@@ -157,13 +222,24 @@ public class ReflectionDiffBuilder<T> implements Builder<DiffResult<T>> {
     /**
      * Constructs a new instance.
      *
+     * @param builder A non-null Builder.
+     * @throws NullPointerException Thrown on null input.
+     */
+    private ReflectionDiffBuilder(final Builder<T> builder) {
+        super(Objects.requireNonNull(builder, "builder"));
+        this.diffBuilder = Objects.requireNonNull(builder.diffBuilder, "diffBuilder");
+        this.excludeFieldNames = Objects.requireNonNull(builder.excludeFieldNames, "excludeFieldNames");
+    }
+
+    /**
+     * Constructs a new instance.
+     *
      * @param diffBuilder A non-null DiffBuilder.
      * @param excludeFieldNames A non-null String array.
-     * @throw NullPointerException Thrown on null input.
+     * @throws NullPointerException Thrown on null input.
      */
     private ReflectionDiffBuilder(final DiffBuilder<T> diffBuilder, final String[] excludeFieldNames) {
-        this.diffBuilder = Objects.requireNonNull(diffBuilder, "diffBuilder");
-        this.excludeFieldNames = Objects.requireNonNull(excludeFieldNames, "excludeFieldNames");
+        this(ReflectionDiffBuilder.<T>builder().setDiffBuilder(diffBuilder).setExcludeFieldNames(excludeFieldNames));
     }
 
     /**
@@ -177,7 +253,7 @@ public class ReflectionDiffBuilder<T> implements Builder<DiffResult<T>> {
      * @param left  {@code this} object.
      * @param right The object to diff against.
      * @param style The style will use when outputting the objects, {@code null} uses the default
-     * @throws IllegalArgumentException if {@code left} or {@code right} is {@code null}.
+     * @throws IllegalArgumentException Thrown if {@code left} or {@code right} is {@code null}.
      * @deprecated Use {@link Builder}.
      */
     @Deprecated
@@ -197,18 +273,18 @@ public class ReflectionDiffBuilder<T> implements Builder<DiffResult<T>> {
     /**
      * Appends fields using reflection.
      *
-     * @throws SecurityException if an underlying accessible object's method denies the request.
+     * @throws SecurityException Thrown if an underlying accessible object's method denies the request.
      * @see SecurityManager#checkPermission
      */
     private void appendFields(final Class<?> clazz) {
         for (final Field field : FieldUtils.getAllFields(clazz)) {
             if (accept(field)) {
                 try {
-                    diffBuilder.append(field.getName(), readField(field, getLeft()), readField(field, getRight()));
-                } catch (final IllegalAccessException e) {
-                    // this can't happen. Would get a Security exception instead
-                    // throw a runtime exception in case the impossible happens.
-                    throw new IllegalArgumentException("Unexpected IllegalAccessException: " + e.getMessage(), e);
+                    if (setAccessible(field)) {
+                        diffBuilder.append(field.getName(), Reflection.getUnchecked(field, getLeft()), Reflection.getUnchecked(field, getRight()));
+                    }
+                } catch (final RuntimeException e) {
+                    // Ignored as per AccessibleObject / SecurityManager / InaccessibleObjectException
                 }
             }
         }
@@ -217,16 +293,21 @@ public class ReflectionDiffBuilder<T> implements Builder<DiffResult<T>> {
     /**
      * {@inheritDoc}
      *
-     * @throws SecurityException if an underlying accessible object's method denies the request.
+     * @throws SecurityException Thrown if an underlying accessible object's method denies the request.
      * @see SecurityManager#checkPermission
      */
     @Override
     public DiffResult<T> build() {
-        if (getLeft().equals(getRight())) {
+        if (getLeft() == getRight() || isRegistered(getLeft(), getRight())) {
             return diffBuilder.build();
         }
-        appendFields(getLeft().getClass());
-        return diffBuilder.build();
+        try {
+            register(getLeft(), getRight());
+            appendFields(getLeft().getClass());
+            return diffBuilder.build();
+        } finally {
+            unregister(getLeft(), getRight());
+        }
     }
 
     /**
@@ -245,21 +326,6 @@ public class ReflectionDiffBuilder<T> implements Builder<DiffResult<T>> {
 
     private T getRight() {
         return diffBuilder.getRight();
-    }
-
-    /**
-     * Reads a {@link Field}, forcing access if needed.
-     *
-     * @param field  The field to use.
-     * @param target The object to call on, may be {@code null} for {@code static} fields.
-     * @return The field value.
-     * @throws NullPointerException   if the field is {@code null}.
-     * @throws IllegalAccessException if the field is not made accessible.
-     * @throws SecurityException      if an underlying accessible object's method denies the request.
-     * @see SecurityManager#checkPermission
-     */
-    private Object readField(final Field field, final Object target) throws IllegalAccessException {
-        return FieldUtils.readField(field, target, true);
     }
 
     /**

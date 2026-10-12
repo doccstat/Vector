@@ -19,6 +19,7 @@ package org.apache.commons.lang3;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.Test;
@@ -304,5 +305,42 @@ class BitFieldTest extends AbstractLangTest {
         }
         // verify that excess bits are stripped off
         assertEquals(BF_SINGLE.setValue(0x4000, 2), 0);
+    }
+
+    /**
+     * Tests that a mask wider than 32 bits (only constructible via {@link BitField#BitField(long)}) makes every int/short/byte holder accessor fail loudly
+     * instead of silently answering wrongly, and that a long-constructed mask that fits in 32 bits keeps working with the narrow accessors.
+     */
+    @Test
+    void testWideMaskRejectsNarrowHolderAccessors() {
+        final BitField wide = new BitField(0x100000000L);
+        // Before the guard, sign extension made every above-bit-31 flag read as set on any negative int holder.
+        assertThrows(IllegalStateException.class, () -> wide.isSet(-1));
+        assertThrows(IllegalStateException.class, () -> wide.isAllSet(-1));
+        assertThrows(IllegalStateException.class, () -> wide.getValue(-1));
+        assertThrows(IllegalStateException.class, () -> wide.getRawValue(-1));
+        assertThrows(IllegalStateException.class, () -> wide.getShortValue((short) -1));
+        assertThrows(IllegalStateException.class, () -> wide.getShortRawValue((short) -1));
+        assertThrows(IllegalStateException.class, () -> wide.clear(-1));
+        assertThrows(IllegalStateException.class, () -> wide.clearByte((byte) -1));
+        assertThrows(IllegalStateException.class, () -> wide.clearShort((short) -1));
+        assertThrows(IllegalStateException.class, () -> wide.set(0));
+        assertThrows(IllegalStateException.class, () -> wide.setBoolean(0, true));
+        assertThrows(IllegalStateException.class, () -> wide.setByte((byte) 0));
+        assertThrows(IllegalStateException.class, () -> wide.setByteBoolean((byte) 0, true));
+        assertThrows(IllegalStateException.class, () -> wide.setShort((short) 0));
+        assertThrows(IllegalStateException.class, () -> wide.setShortBoolean((short) 0, true));
+        assertThrows(IllegalStateException.class, () -> wide.setShortValue((short) 0, (short) 1));
+        assertThrows(IllegalStateException.class, () -> wide.setValue(0, 1));
+        // The long accessors remain fully functional for the same field.
+        assertFalse(wide.isSet(0xFFFFFFFFL));
+        assertTrue(wide.isSet(0x100000000L));
+        assertEquals(1L, wide.getValue(0x100000000L));
+        assertEquals(0x100000000L, wide.set(0L));
+        // A long-constructed mask that fits in 32 bits keeps working with the narrow accessors.
+        final BitField narrow = new BitField(0x80000000L);
+        assertTrue(narrow.isSet(-1));
+        assertEquals(1, narrow.getValue(-1));
+        assertEquals(0x80000000, narrow.set(0));
     }
 }

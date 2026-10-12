@@ -51,9 +51,11 @@ import org.apache.commons.lang3.stream.Streams;
  *
  * <h2>Known Limitations</h2>
  * <h3>Accessing Public Methods In A Default Access Superclass</h3>
- * <p>There is an issue when invoking {@code public} methods contained in a default access superclass on JREs prior to 1.4.
+ * <p>
+ * There is an issue when invoking {@code public} methods contained in a default access superclass on JREs prior to 1.4.
  * Reflection locates these methods fine and correctly assigns them as {@code public}.
- * However, an {@link IllegalAccessException} is thrown if the method is invoked.</p>
+ * However, an {@link IllegalAccessException} is thrown if the method is invoked.
+ * </p>
  *
  * <p>
  * {@link MethodUtils} contains a workaround for this situation.
@@ -179,9 +181,12 @@ public class MethodUtils {
                 if (!ClassUtils.isPublic(anInterface)) {
                     continue;
                 }
-                // Does the method exist on this interface?
+                // Does the method exist on this interface? A static or private one is not inherited.
                 try {
-                    return anInterface.getDeclaredMethod(methodName, parameterTypes);
+                    final Method declared = anInterface.getDeclaredMethod(methodName, parameterTypes);
+                    if (MemberUtils.isPublic(declared) && !MemberUtils.isStatic(declared)) {
+                        return declared;
+                    }
                 } catch (final NoSuchMethodException ignored) {
                     /*
                      * Swallow, if no method is found after the loop then this method returns null.
@@ -262,8 +267,8 @@ public class MethodUtils {
      *                      present.
      * @param ignoreAccess  determines if underlying method has to be accessible.
      * @return The first matching annotation, or {@code null} if not found.
-     * @throws NullPointerException if either the method or annotation class is {@code null}.
-     * @throws SecurityException    if an underlying accessible object's method denies the request.
+     * @throws NullPointerException Thrown if either the method or annotation class is {@code null}.
+     * @throws SecurityException    Thrown if an underlying accessible object's method denies the request.
      * @see SecurityManager#checkPermission
      * @since 3.6
      */
@@ -363,13 +368,16 @@ public class MethodUtils {
      * @param methodName     find method with this name.
      * @param requestTypes find method with most compatible parameters.
      * @return The accessible method or null.
-     * @throws SecurityException if an underlying accessible object's method denies the request.
+     * @throws SecurityException Thrown if an underlying accessible object's method denies the request.
      * @see SecurityManager#checkPermission
      */
     public static Method getMatchingAccessibleMethod(final Class<?> cls, final String methodName, final Class<?>... requestTypes) {
         final Method candidate = getMethodObject(cls, methodName, requestTypes);
         if (candidate != null) {
-            return MemberUtils.setAccessibleWorkaround(candidate);
+            // The exact match may be declared on a non-public class, so prefer the public
+            // declaration the way the search below does; a static method hides, so it is kept.
+            final Method accessibleCandidate = MemberUtils.isStatic(candidate) ? null : getAccessibleMethod(cls, candidate);
+            return MemberUtils.setAccessibleWorkaround(accessibleCandidate != null ? accessibleCandidate : candidate);
         }
         // search through all methods
         final Method[] methods = cls.getMethods();
@@ -407,8 +415,8 @@ public class MethodUtils {
      * @param cls            The class that will be subjected to the method search.
      * @param methodName     The method that we wish to call.
      * @param parameterTypes Argument class types.
-     * @throws IllegalStateException if there is no unique result.
-     * @throws NullPointerException  if the class is {@code null}.
+     * @throws IllegalStateException Thrown if there is no unique result.
+     * @throws NullPointerException  Thrown if the class is {@code null}.
      * @return The method.
      * @since 3.5
      */
@@ -476,7 +484,7 @@ public class MethodUtils {
      * @param cls           The {@link Class} to query.
      * @param annotationCls The {@link Annotation} that must be present on a method to be matched.
      * @return A list of Methods (possibly empty).
-     * @throws NullPointerException if the class or annotation are {@code null}.
+     * @throws NullPointerException Thrown if the class or annotation are {@code null}.
      * @since 3.4
      */
     public static List<Method> getMethodsListWithAnnotation(final Class<?> cls, final Class<? extends Annotation> annotationCls) {
@@ -491,7 +499,7 @@ public class MethodUtils {
      * @param searchSupers  determines if a lookup in the entire inheritance hierarchy of the given class should be performed.
      * @param ignoreAccess  determines if non-public methods should be considered.
      * @return A list of Methods (possibly empty).
-     * @throws NullPointerException if either the class or annotation class is {@code null}.
+     * @throws NullPointerException Thrown if either the class or annotation class is {@code null}.
      * @since 3.6
      */
     public static List<Method> getMethodsListWithAnnotation(final Class<?> cls, final Class<? extends Annotation> annotationCls, final boolean searchSupers,
@@ -514,7 +522,7 @@ public class MethodUtils {
      * @param cls           The {@link Class} to query.
      * @param annotationCls The {@link java.lang.annotation.Annotation} that must be present on a method to be matched.
      * @return An array of Methods (possibly empty).
-     * @throws NullPointerException if the class or annotation are {@code null}
+     * @throws NullPointerException Thrown if the class or annotation are {@code null}.
      * @since 3.4
      */
     public static Method[] getMethodsWithAnnotation(final Class<?> cls, final Class<? extends Annotation> annotationCls) {
@@ -529,7 +537,7 @@ public class MethodUtils {
      * @param searchSupers  determines if a lookup in the entire inheritance hierarchy of the given class should be performed.
      * @param ignoreAccess  determines if non-public methods should be considered.
      * @return An array of Methods (possibly empty).
-     * @throws NullPointerException if the class or annotation are {@code null}.
+     * @throws NullPointerException Thrown if the class or annotation are {@code null}.
      * @since 3.6
      */
     public static Method[] getMethodsWithAnnotation(final Class<?> cls, final Class<? extends Annotation> annotationCls, final boolean searchSupers,
@@ -543,8 +551,8 @@ public class MethodUtils {
      * @param method lowest to consider.
      * @param interfacesBehavior whether to search interfaces, {@code null} {@code implies} false.
      * @return A {@code Set<Method>} in ascending order from subclass to superclass.
-     * @throws NullPointerException if the specified method is {@code null}.
-     * @throws SecurityException if an underlying accessible object's method denies the request.
+     * @throws NullPointerException Thrown if the specified method is {@code null}.
+     * @throws SecurityException Thrown if an underlying accessible object's method denies the request.
      * @see SecurityManager#checkPermission
      * @since 3.2
      */
@@ -881,10 +889,10 @@ public class MethodUtils {
      * @param object invoke method on this object.
      * @param methodName get method with this name.
      * @return The value returned by the invoked method.
-     * @throws NoSuchMethodException if there is no such accessible method.
-     * @throws InvocationTargetException wraps an exception thrown by the method invoked.
-     * @throws IllegalAccessException if the requested method is not accessible via reflection.
-     * @throws SecurityException if an underlying accessible object's method denies the request.
+     * @throws NoSuchMethodException Thrown if there is no such accessible method.
+     * @throws InvocationTargetException Thrown to wrap an exception thrown by the method invoked.
+     * @throws IllegalAccessException Thrown if the requested method is not accessible via reflection.
+     * @throws SecurityException Thrown if an underlying accessible object's method denies the request.
      * @see SecurityManager#checkPermission
      * @since 3.4
      */
@@ -913,11 +921,11 @@ public class MethodUtils {
      * @param methodName get method with this name.
      * @param args use these arguments - treat null as empty array.
      * @return The value returned by the invoked method.
-     * @throws NoSuchMethodException if there is no such accessible method.
-     * @throws InvocationTargetException wraps an exception thrown by the method invoked.
-     * @throws IllegalAccessException if the requested method is not accessible via reflection.
-     * @throws NullPointerException if the object or method name are {@code null}.
-     * @throws SecurityException if an underlying accessible object's method denies the request.
+     * @throws NoSuchMethodException Thrown if there is no such accessible method.
+     * @throws InvocationTargetException Thrown to wrap an exception thrown by the method invoked.
+     * @throws IllegalAccessException Thrown if the requested method is not accessible via reflection.
+     * @throws NullPointerException Thrown if the object or method name are {@code null}.
+     * @throws SecurityException Thrown if an underlying accessible object's method denies the request.
      * @see SecurityManager#checkPermission
      */
     public static Object invokeMethod(final Object object, final String methodName, final Object... args)

@@ -20,6 +20,7 @@ import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.beans.PropertyChangeEvent;
@@ -254,6 +255,16 @@ class EventCountCircuitBreakerTest extends AbstractLangTest {
                 TimeUnit.SECONDS, CLOSING_THRESHOLD, 2, TimeUnit.MILLISECONDS);
         assertEquals(NANO_FACTOR, breaker.getOpeningInterval(), "Wrong opening interval");
         assertEquals(2 * NANO_FACTOR / 1000, breaker.getClosingInterval(), "Wrong closing interval");
+    }
+
+    /**
+     * Tests that a negative increment is rejected: the event count must only move toward
+     * the opening threshold.
+     */
+    @Test
+    void testNegativeIncrementRejected() {
+        final EventCountCircuitBreaker breaker = new EventCountCircuitBreaker(OPENING_THRESHOLD, 1, TimeUnit.SECONDS);
+        assertThrows(IllegalArgumentException.class, () -> breaker.incrementAndCheckState(-1), "Negative increments must be rejected");
     }
 
     /**

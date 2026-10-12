@@ -26,11 +26,15 @@ import org.apache.commons.lang3.math.NumberUtils;
 /**
  * Operations on boolean primitives and Boolean objects.
  *
- * <p>This class tries to handle {@code null} input gracefully.
+ * <p>
+ * This class tries to handle {@code null} input gracefully.
  * An exception will not be thrown for a {@code null} input.
- * Each method documents its behavior in more detail.</p>
+ * Each method documents its behavior in more detail.
+ * </p>
  *
- * <p>#ThreadSafe#</p>
+ * <p>
+ * #ThreadSafe#
+ * </p>
  *
  * @since 2.0
  */
@@ -94,8 +98,8 @@ public class BooleanUtils {
      * @param array  An array of {@code boolean}s
      * @return The result of the logical 'and' operation. That is {@code false}
      * if any of the parameters is {@code false} and {@code true} otherwise.
-     * @throws NullPointerException if {@code array} is {@code null}
-     * @throws IllegalArgumentException if {@code array} is empty.
+     * @throws NullPointerException Thrown if {@code array} is {@code null}.
+     * @throws IllegalArgumentException Thrown if {@code array} is empty.
      * @since 3.0.1
      */
     public static boolean and(final boolean... array) {
@@ -126,8 +130,8 @@ public class BooleanUtils {
      * @param array  An array of {@link Boolean}s
      * @return The result of the logical 'and' operation. That is {@code false}
      * if any of the parameters is {@code false} and {@code true} otherwise.
-     * @throws NullPointerException if {@code array} is {@code null}
-     * @throws IllegalArgumentException if {@code array} is empty.
+     * @throws NullPointerException Thrown if {@code array} is {@code null}.
+     * @throws IllegalArgumentException Thrown if {@code array} is empty.
      * @since 3.0.1
      */
     public static Boolean and(final Boolean... array) {
@@ -173,8 +177,7 @@ public class BooleanUtils {
     }
 
     /**
-     * Checks if a {@link Boolean} value is {@code false},
-     * handling {@code null} by returning {@code false}.
+     * Tests whether a {@link Boolean} value is {@code false}, handling {@code null} by returning {@code false}.
      *
      * <pre>
      *   BooleanUtils.isFalse(Boolean.TRUE)  = false
@@ -191,8 +194,7 @@ public class BooleanUtils {
     }
 
     /**
-     * Checks if a {@link Boolean} value is <em>not</em> {@code false},
-     * handling {@code null} by returning {@code true}.
+     * Tests whether a {@link Boolean} value is <em>not</em> {@code false}, handling {@code null} by returning {@code true}.
      *
      * <pre>
      *   BooleanUtils.isNotFalse(Boolean.TRUE)  = true
@@ -209,8 +211,7 @@ public class BooleanUtils {
     }
 
     /**
-     * Checks if a {@link Boolean} value is <em>not</em> {@code true},
-     * handling {@code null} by returning {@code true}.
+     * Tests whether a {@link Boolean} value is <em>not</em> {@code true}, handling {@code null} by returning {@code true}.
      *
      * <pre>
      *   BooleanUtils.isNotTrue(Boolean.TRUE)  = false
@@ -227,8 +228,7 @@ public class BooleanUtils {
     }
 
     /**
-     * Checks if a {@link Boolean} value is {@code true},
-     * handling {@code null} by returning {@code false}.
+     * Tests whether a {@link Boolean} value is {@code true}, handling {@code null} by returning {@code false}.
      *
      * <pre>
      *   BooleanUtils.isTrue(Boolean.TRUE)  = true
@@ -247,10 +247,14 @@ public class BooleanUtils {
     /**
      * Negates the specified boolean.
      *
-     * <p>If {@code null} is passed in, {@code null} will be returned.</p>
+     * <p>
+     * If {@code null} is passed in, {@code null} will be returned.
+     * </p>
      *
-     * <p>NOTE: This returns {@code null} and will throw a {@link NullPointerException}
-     * if unboxed to a boolean.</p>
+     * <p>
+     * NOTE: This returns {@code null} and will throw a {@link NullPointerException}
+     * if unboxed to a boolean.
+     * </p>
      *
      * <pre>
      *   BooleanUtils.negate(Boolean.TRUE)  = Boolean.FALSE;
@@ -279,8 +283,8 @@ public class BooleanUtils {
      *
      * @param array  An array of {@code boolean}s
      * @return The result of the one-hot operations
-     * @throws NullPointerException if {@code array} is {@code null}
-     * @throws IllegalArgumentException if {@code array} is empty.
+     * @throws NullPointerException Thrown if {@code array} is {@code null}.
+     * @throws IllegalArgumentException Thrown if {@code array} is empty.
      */
     public static boolean oneHot(final boolean... array) {
         ObjectUtils.requireNonEmpty(array, "array");
@@ -310,8 +314,8 @@ public class BooleanUtils {
      *
      * @param array  An array of {@code boolean}s
      * @return The result of the one-hot operations
-     * @throws NullPointerException if {@code array} is {@code null}
-     * @throws IllegalArgumentException if {@code array} is empty.
+     * @throws NullPointerException Thrown if {@code array} is {@code null}.
+     * @throws IllegalArgumentException Thrown if {@code array} is empty.
      */
     public static Boolean oneHot(final Boolean... array) {
         return Boolean.valueOf(oneHot(ArrayUtils.toPrimitive(array)));
@@ -331,8 +335,8 @@ public class BooleanUtils {
      *
      * @param array  An array of {@code boolean}s
      * @return {@code true} if any of the arguments is {@code true}, and it returns {@code false} otherwise.
-     * @throws NullPointerException if {@code array} is {@code null}
-     * @throws IllegalArgumentException if {@code array} is empty.
+     * @throws NullPointerException Thrown if {@code array} is {@code null}.
+     * @throws IllegalArgumentException Thrown if {@code array} is empty.
      * @since 3.0.1
      */
     public static boolean or(final boolean... array) {
@@ -364,8 +368,8 @@ public class BooleanUtils {
      *
      * @param array  An array of {@link Boolean}s
      * @return {@code true} if any of the arguments is {@code true}, and it returns {@code false} otherwise.
-     * @throws NullPointerException if {@code array} is {@code null}
-     * @throws IllegalArgumentException if {@code array} is empty.
+     * @throws NullPointerException Thrown if {@code array} is {@code null}.
+     * @throws IllegalArgumentException Thrown if {@code array} is empty.
      * @since 3.0.1
      */
     public static Boolean or(final Boolean... array) {
@@ -421,8 +425,10 @@ public class BooleanUtils {
     /**
      * Converts an int to a boolean specifying the conversion values.
      *
-     * <p>If the {@code trueValue} and {@code falseValue} are the same number then
-     * the return value will be {@code true} in case {@code value} matches it.</p>
+     * <p>
+     * If the {@code trueValue} and {@code falseValue} are the same number then
+     * the return value will be {@code true} in case {@code value} matches it.
+     * </p>
      *
      * <pre>
      *   BooleanUtils.toBoolean(0, 1, 0) = false
@@ -436,8 +442,7 @@ public class BooleanUtils {
      * @param trueValue  The value to match for {@code true}
      * @param falseValue  The value to match for {@code false}
      * @return {@code true} or {@code false}
-     * @throws IllegalArgumentException if {@code value} does not match neither
-     * {@code trueValue} no {@code falseValue}
+     * @throws IllegalArgumentException Thrown if {@code value} does not match neither {@code trueValue} no {@code falseValue}.
      */
     public static boolean toBoolean(final int value, final int trueValue, final int falseValue) {
         if (value == trueValue) {
@@ -464,7 +469,7 @@ public class BooleanUtils {
      * @param trueValue  The value to match for {@code true}, may be {@code null}
      * @param falseValue  The value to match for {@code false}, may be {@code null}
      * @return {@code true} or {@code false}
-     * @throws IllegalArgumentException if no match
+     * @throws IllegalArgumentException Thrown if no match.
      */
     public static boolean toBoolean(final Integer value, final Integer trueValue, final Integer falseValue) {
         if (value == null) {
@@ -485,11 +490,14 @@ public class BooleanUtils {
     /**
      * Converts a String to a boolean (optimized for performance).
      *
-     * <p>{@code 'true'}, {@code 'on'}, {@code 'y'}, {@code 't'} or {@code 'yes'}
+     * <p>
+     * {@code 'true'}, {@code 'on'}, {@code 'y'}, {@code 't'} or {@code 'yes'}
      * (case insensitive) will return {@code true}. Otherwise,
-     * {@code false} is returned.</p>
+     * {@code false} is returned.
+     * </p>
      *
-     * <p>This method performs 4 times faster (JDK1.4) than
+     * <p>
+     * This method performs 4 times faster (JDK1.4) than
      * {@code Boolean.valueOf(String)}. However, this method accepts
      * 'on' and 'yes', 't', 'y' as true values.
      *
@@ -527,7 +535,7 @@ public class BooleanUtils {
      * @param trueString  The String to match for {@code true} (case-sensitive), may be {@code null}
      * @param falseString  The String to match for {@code false} (case-sensitive), may be {@code null}
      * @return The boolean value of the string
-     * @throws IllegalArgumentException if the String doesn't match
+     * @throws IllegalArgumentException Thrown if the String doesn't match.
      */
     public static boolean toBoolean(final String str, final String trueString, final String falseString) {
         if (str == trueString) {
@@ -591,11 +599,15 @@ public class BooleanUtils {
     /**
      * Converts an int to a Boolean specifying the conversion values.
      *
-     * <p>NOTE: This method may return {@code null} and may throw a {@link NullPointerException}
-     * if unboxed to a {@code boolean}.</p>
+     * <p>
+     * NOTE: This method may return {@code null} and may throw a {@link NullPointerException}
+     * if unboxed to a {@code boolean}.
+     * </p>
      *
-     * <p>The checks are done first for the {@code trueValue}, then for the {@code falseValue} and
-     * finally for the {@code nullValue}.</p>
+     * <p>
+     * The checks are done first for the {@code trueValue}, then for the {@code falseValue} and
+     * finally for the {@code nullValue}.
+     * </p>
      *
      * <pre>
      *   BooleanUtils.toBooleanObject(0, 0, 2, 3) = Boolean.TRUE
@@ -611,7 +623,7 @@ public class BooleanUtils {
      * @param falseValue  The value to match for {@code false}
      * @param nullValue  The value to match for {@code null}
      * @return Boolean.TRUE, Boolean.FALSE, or {@code null}
-     * @throws IllegalArgumentException if no match
+     * @throws IllegalArgumentException Thrown if no match.
      */
     public static Boolean toBooleanObject(final int value, final int trueValue, final int falseValue, final int nullValue) {
         if (value == trueValue) {
@@ -630,10 +642,14 @@ public class BooleanUtils {
      * Converts an Integer to a Boolean using the convention that {@code zero}
      * is {@code false}, every other numeric value is {@code true}.
      *
-     * <p>{@code null} will be converted to {@code null}.</p>
+     * <p>
+     * {@code null} will be converted to {@code null}.
+     * </p>
      *
-     * <p>NOTE: This method may return {@code null} and may throw a {@link NullPointerException}
-     * if unboxed to a {@code boolean}.</p>
+     * <p>
+     * NOTE: This method may return {@code null} and may throw a {@link NullPointerException}
+     * if unboxed to a {@code boolean}.
+     * </p>
      *
      * <pre>
      *   BooleanUtils.toBooleanObject(Integer.valueOf(0))    = Boolean.FALSE
@@ -655,11 +671,15 @@ public class BooleanUtils {
     /**
      * Converts an Integer to a Boolean specifying the conversion values.
      *
-     * <p>NOTE: This method may return {@code null} and may throw a {@link NullPointerException}
-     * if unboxed to a {@code boolean}.</p>
+     * <p>
+     * NOTE: This method may return {@code null} and may throw a {@link NullPointerException}
+     * if unboxed to a {@code boolean}.
+     * </p>
      *
-     * <p>The checks are done first for the {@code trueValue}, then for the {@code falseValue} and
-     * finally for the {@code nullValue}.</p>
+     * <p>
+     * The checks are done first for the {@code trueValue}, then for the {@code falseValue} and
+     * finally for the {@code nullValue}.
+     * </p>
      **
      * <pre>
      *   BooleanUtils.toBooleanObject(Integer.valueOf(0), Integer.valueOf(0), Integer.valueOf(2), Integer.valueOf(3)) = Boolean.TRUE
@@ -675,7 +695,7 @@ public class BooleanUtils {
      * @param falseValue  The value to match for {@code false}, may be {@code null}
      * @param nullValue  The value to match for {@code null}, may be {@code null}
      * @return Boolean.TRUE, Boolean.FALSE, or {@code null}
-     * @throws IllegalArgumentException if no match
+     * @throws IllegalArgumentException Thrown if no match.
      */
     public static Boolean toBooleanObject(final Integer value, final Integer trueValue, final Integer falseValue, final Integer nullValue) {
         if (value == null) {
@@ -701,14 +721,18 @@ public class BooleanUtils {
     /**
      * Converts a String to a Boolean.
      *
-     * <p>{@code 'true'}, {@code 'on'}, {@code 'y'}, {@code 't'}, {@code 'yes'}
+     * <p>
+     * {@code 'true'}, {@code 'on'}, {@code 'y'}, {@code 't'}, {@code 'yes'}
      * or {@code '1'} (case insensitive) will return {@code true}.
      * {@code 'false'}, {@code 'off'}, {@code 'n'}, {@code 'f'}, {@code 'no'}
      * or {@code '0'} (case insensitive) will return {@code false}.
-     * Otherwise, {@code null} is returned.</p>
+     * Otherwise, {@code null} is returned.
+     * </p>
      *
-     * <p>NOTE: This method may return {@code null} and may throw a {@link NullPointerException}
-     * if unboxed to a {@code boolean}.</p>
+     * <p>
+     * NOTE: This method may return {@code null} and may throw a {@link NullPointerException}
+     * if unboxed to a {@code boolean}.
+     * </p>
      *
      * <pre>
      *   // Case is not significant
@@ -830,8 +854,10 @@ public class BooleanUtils {
     /**
      * Converts a String to a Boolean throwing an exception if no match.
      *
-     * <p>NOTE: This method may return {@code null} and may throw a {@link NullPointerException}
-     * if unboxed to a {@code boolean}.</p>
+     * <p>
+     * NOTE: This method may return {@code null} and may throw a {@link NullPointerException}
+     * if unboxed to a {@code boolean}.
+     * </p>
      *
      * <pre>
      *   BooleanUtils.toBooleanObject("true", "true", "false", "null")   = Boolean.TRUE
@@ -851,7 +877,7 @@ public class BooleanUtils {
      * @param nullString  The String to match for {@code null} (case-sensitive), may be {@code null}
      * @return The Boolean value of the string, {@code null} if either the String matches {@code nullString}
      *  or if {@code null} input and {@code nullString} is {@code null}
-     * @throws IllegalArgumentException if the String doesn't match
+     * @throws IllegalArgumentException Thrown if the String doesn't match.
      */
     public static Boolean toBooleanObject(final String str, final String trueString, final String falseString, final String nullString) {
         if (str == null) {
@@ -967,7 +993,9 @@ public class BooleanUtils {
      * Converts a Boolean to an Integer using the convention that
      * {@code zero} is {@code false}.
      *
-     * <p>{@code null} will be converted to {@code null}.</p>
+     * <p>
+     * {@code null} will be converted to {@code null}.
+     * </p>
      *
      * <pre>
      *   BooleanUtils.toIntegerObject(Boolean.TRUE)  = Integer.valueOf(1)
@@ -1173,8 +1201,8 @@ public class BooleanUtils {
      *
      * @param array  An array of {@code boolean}s
      * @return true if the number of true values in the array is odd; otherwise returns false.
-     * @throws NullPointerException if {@code array} is {@code null}
-     * @throws IllegalArgumentException if {@code array} is empty.
+     * @throws NullPointerException Thrown if {@code array} is {@code null}.
+     * @throws IllegalArgumentException Thrown if {@code array} is empty.
      */
     public static boolean xor(final boolean... array) {
         ObjectUtils.requireNonEmpty(array, "array");
@@ -1203,8 +1231,8 @@ public class BooleanUtils {
      *
      * @param array  An array of {@link Boolean}s
      * @return The result of the xor operations
-     * @throws NullPointerException if {@code array} is {@code null}
-     * @throws IllegalArgumentException if {@code array} is empty.
+     * @throws NullPointerException Thrown if {@code array} is {@code null}.
+     * @throws IllegalArgumentException Thrown if {@code array} is empty.
      */
     public static Boolean xor(final Boolean... array) {
         ObjectUtils.requireNonEmpty(array, "array");
@@ -1215,8 +1243,10 @@ public class BooleanUtils {
      * {@link BooleanUtils} instances should NOT be constructed in standard programming.
      * Instead, the class should be used as {@code BooleanUtils.negate(true);}.
      *
-     * <p>This constructor is public to permit tools that require a JavaBean instance
-     * to operate.</p>
+     * <p>
+     * This constructor is public to permit tools that require a JavaBean instance
+     * to operate.
+     * </p>
      *
      * @deprecated TODO Make private in 4.0.
      */

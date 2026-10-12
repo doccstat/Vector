@@ -32,19 +32,27 @@ import org.apache.commons.lang3.tuple.Pair;
 /**
  * Assists in implementing {@link Comparable#compareTo(Object)} methods.
  *
- * <p>It is consistent with {@code equals(Object)} and
+ * <p>
+ * It is consistent with {@code equals(Object)} and
  * {@code hashCode()} built with {@link EqualsBuilder} and
- * {@link HashCodeBuilder}.</p>
+ * {@link HashCodeBuilder}.
+ * </p>
  *
- * <p>Two Objects that compare equal using {@code equals(Object)} should normally
- * also compare equal using {@code compareTo(Object)}.</p>
+ * <p>
+ * Two Objects that compare equal using {@code equals(Object)} should normally
+ * also compare equal using {@code compareTo(Object)}.
+ * </p>
  *
- * <p>All relevant fields should be included in the calculation of the
+ * <p>
+ * All relevant fields should be included in the calculation of the
  * comparison. Derived fields may be ignored. The same fields, in the same
  * order, should be used in both {@code compareTo(Object)} and
- * {@code equals(Object)}.</p>
+ * {@code equals(Object)}.
+ * </p>
  *
- * <p>To use this class write code as follows:</p>
+ * <p>
+ * To use this class write code as follows:
+ * </p>
  *
  * <pre>
  * public class MyClass {
@@ -66,21 +74,27 @@ import org.apache.commons.lang3.tuple.Pair;
  * }
  * </pre>
  *
- * <p>Values are compared in the order they are appended to the builder. If any comparison returns
+ * <p>
+ * Values are compared in the order they are appended to the builder. If any comparison returns
  * a non-zero result, then that value will be the result returned by {@code toComparison()} and all
- * subsequent comparisons are skipped.</p>
+ * subsequent comparisons are skipped.
+ * </p>
  *
- * <p>Alternatively, there are {@link #reflectionCompare(Object, Object) reflectionCompare} methods that use
+ * <p>
+ * Alternatively, there are {@link #reflectionCompare(Object, Object) reflectionCompare} methods that use
  * reflection to determine the fields to append. Because fields can be private,
  * {@code reflectionCompare} uses {@link java.lang.reflect.AccessibleObject#setAccessible(boolean)} to
  * bypass normal access control checks. This will fail under a security manager,
  * unless the appropriate permissions are set up correctly. It is also
- * slower than appending explicitly.</p>
+ * slower than appending explicitly.
+ * </p>
  * <p>
  * See also {@link AbstractBuilder#setForceAccessible(boolean)}
  * </p>
- * <p>A typical implementation of {@code compareTo(Object)} using
- * {@code reflectionCompare} looks like:</p>
+ * <p>
+ * A typical implementation of {@code compareTo(Object)} using
+ * {@code reflectionCompare} looks like:
+ * </p>
 
  * <pre>
  * public int compareTo(Object o) {
@@ -88,9 +102,11 @@ import org.apache.commons.lang3.tuple.Pair;
  * }
  * </pre>
  *
- * <p>The reflective methods compare object fields in the order returned by
+ * <p>
+ * The reflective methods compare object fields in the order returned by
  * {@link Class#getDeclaredFields()}. The fields of the class are compared first, followed by those
- * of its parent classes (in order from the bottom to the top of the class hierarchy).</p>
+ * of its parent classes (in order from the bottom to the top of the class hierarchy).
+ * </p>
  *
  * @see Comparable
  * @see Object#equals(Object)
@@ -217,8 +233,8 @@ public class CompareToBuilder extends AbstractReflection implements Builder<Inte
      * @param lhs left-hand side object.
      * @param rhs right-hand side object.
      * @return A negative integer, zero, or a positive integer as {@code lhs} is less than, equal to, or greater than {@code rhs}.
-     * @throws NullPointerException if either (but not both) parameters are {@code null}.
-     * @throws ClassCastException   if {@code rhs} is not assignment-compatible with {@code lhs}.
+     * @throws NullPointerException Thrown if either (but not both) parameters are {@code null}.
+     * @throws ClassCastException   Thrown if {@code rhs} is not assignment-compatible with {@code lhs}.
      */
     public static int reflectionCompare(final Object lhs, final Object rhs) {
         return reflectionCompare(lhs, rhs, false, null);
@@ -243,8 +259,8 @@ public class CompareToBuilder extends AbstractReflection implements Builder<Inte
      * @param rhs               right-hand side object.
      * @param compareTransients whether to compare transient fields.
      * @return A negative integer, zero, or a positive integer as {@code lhs} is less than, equal to, or greater than {@code rhs}.
-     * @throws NullPointerException if either {@code lhs} or {@code rhs} (but not both) is {@code null}.
-     * @throws ClassCastException   if {@code rhs} is not assignment-compatible with {@code lhs}.
+     * @throws NullPointerException Thrown if either {@code lhs} or {@code rhs} (but not both) is {@code null}.
+     * @throws ClassCastException   Thrown if {@code rhs} is not assignment-compatible with {@code lhs}.
      */
     public static int reflectionCompare(final Object lhs, final Object rhs, final boolean compareTransients) {
         return reflectionCompare(lhs, rhs, compareTransients, null);
@@ -272,8 +288,8 @@ public class CompareToBuilder extends AbstractReflection implements Builder<Inte
      * @param reflectUpToClass  last superclass for which fields are compared.
      * @param excludeFields     fields to exclude.
      * @return A negative integer, zero, or a positive integer as {@code lhs} is less than, equal to, or greater than {@code rhs}.
-     * @throws NullPointerException if either {@code lhs} or {@code rhs} (but not both) is {@code null}.
-     * @throws ClassCastException   if {@code rhs} is not assignment-compatible with {@code lhs}.
+     * @throws NullPointerException Thrown if either {@code lhs} or {@code rhs} (but not both) is {@code null}.
+     * @throws ClassCastException   Thrown if {@code rhs} is not assignment-compatible with {@code lhs}.
      * @since 2.2 (2.0 as {@code reflectionCompare(Object, Object, boolean, Class)}).
      */
     public static int reflectionCompare(
@@ -319,8 +335,8 @@ public class CompareToBuilder extends AbstractReflection implements Builder<Inte
      * @param rhs           right-hand side object.
      * @param excludeFields Collection of String fields to exclude.
      * @return A negative integer, zero, or a positive integer as {@code lhs} is less than, equal to, or greater than {@code rhs}.
-     * @throws NullPointerException if either {@code lhs} or {@code rhs} (but not both) is {@code null}.
-     * @throws ClassCastException   if {@code rhs} is not assignment-compatible with {@code lhs}.
+     * @throws NullPointerException Thrown if either {@code lhs} or {@code rhs} (but not both) is {@code null}.
+     * @throws ClassCastException   Thrown if {@code rhs} is not assignment-compatible with {@code lhs}.
      * @since 2.2
      */
     public static int reflectionCompare(final Object lhs, final Object rhs, final Collection<String> excludeFields) {
@@ -346,8 +362,8 @@ public class CompareToBuilder extends AbstractReflection implements Builder<Inte
      * @param rhs           right-hand side object.
      * @param excludeFields array of fields to exclude.
      * @return A negative integer, zero, or a positive integer as {@code lhs} is less than, equal to, or greater than {@code rhs}.
-     * @throws NullPointerException if either {@code lhs} or {@code rhs} (but not both) is {@code null}.
-     * @throws ClassCastException   if {@code rhs} is not assignment-compatible with {@code lhs}.
+     * @throws NullPointerException Thrown if either {@code lhs} or {@code rhs} (but not both) is {@code null}.
+     * @throws ClassCastException   Thrown if {@code rhs} is not assignment-compatible with {@code lhs}.
      * @since 2.2
      */
     public static int reflectionCompare(final Object lhs, final Object rhs, final String... excludeFields) {
@@ -774,7 +790,7 @@ public class CompareToBuilder extends AbstractReflection implements Builder<Inte
      * @param lhs left-hand side object.
      * @param rhs right-hand side object.
      * @return {@code this} instance.
-     * @throws ClassCastException if {@code rhs} is not assignment-compatible with {@code lhs}.
+     * @throws ClassCastException Thrown if {@code rhs} is not assignment-compatible with {@code lhs}.
      */
     public CompareToBuilder append(final Object lhs, final Object rhs) {
         return append(lhs, rhs, null);
@@ -796,7 +812,7 @@ public class CompareToBuilder extends AbstractReflection implements Builder<Inte
      * @param rhs        right-hand side object.
      * @param comparator {@link Comparator} used to compare the objects, {@code null} means treat lhs as {@link Comparable}
      * @return {@code this} instance.
-     * @throws ClassCastException if {@code rhs} is not assignment-compatible with {@code lhs}.
+     * @throws ClassCastException Thrown if {@code rhs} is not assignment-compatible with {@code lhs}.
      * @since 2.0
      */
     public CompareToBuilder append(final Object lhs, final Object rhs, final Comparator<?> comparator) {
@@ -850,7 +866,7 @@ public class CompareToBuilder extends AbstractReflection implements Builder<Inte
      * @param lhs left-hand side array.
      * @param rhs right-hand side array.
      * @return {@code this} instance.
-     * @throws ClassCastException if {@code rhs} is not assignment-compatible with {@code lhs}.
+     * @throws ClassCastException Thrown if {@code rhs} is not assignment-compatible with {@code lhs}.
      */
     public CompareToBuilder append(final Object[] lhs, final Object[] rhs) {
         return append(lhs, rhs, null);
@@ -872,7 +888,7 @@ public class CompareToBuilder extends AbstractReflection implements Builder<Inte
      * @param rhs        right-hand side array.
      * @param comparator {@link Comparator} to use to compare the array elements, {@code null} means to treat {@code lhs} elements as {@link Comparable}.
      * @return {@code this} instance.
-     * @throws ClassCastException if {@code rhs} is not assignment-compatible with {@code lhs}.
+     * @throws ClassCastException Thrown if {@code rhs} is not assignment-compatible with {@code lhs}.
      * @since 2.0
      */
     public CompareToBuilder append(final Object[] lhs, final Object[] rhs, final Comparator<?> comparator) {

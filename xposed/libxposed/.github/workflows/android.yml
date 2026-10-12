@@ -6,12 +6,16 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
   pages: write
   id-token: write
 
 jobs:
   build:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
     runs-on: ubuntu-latest
 
     steps:
@@ -19,7 +23,6 @@ jobs:
       with:
         submodules: 'recursive'
         fetch-depth: 0
-
     - name: set up JDK
       uses: actions/setup-java@v4
       with:
@@ -33,14 +36,23 @@ jobs:
         echo 'org.gradle.parallel=true' >> gradle.properties
         echo 'org.gradle.vfs.watch=true' >> gradle.properties
         echo 'org.gradle.jvmargs=-Xmx2048m' >> gradle.properties
-        ./gradlew assemble :api:sourceReleaseJar
+        ./gradlew publishToMavenLocal
         ./gradlew --stop
-
-    - name: Upload AAR Artifacts
+      env:
+        ORG_GRADLE_PROJECT_signingKey: ${{ secrets.maven_pgp_signingKey }}
+        ORG_GRADLE_PROJECT_signingPassword: ${{ secrets.maven_pgp_signingPassword }}
+    - name: Upload library
       uses: actions/upload-artifact@v4
       with:
-        name: libxposed-api-artifacts
-        path: |
-          api/build/outputs/aar/*.aar
-          api/build/intermediates/source_jar/release/release-sources.jar
-        if-no-files-found: warn
+        name: library
+        path: ~/.m2/repository/
+        include-hidden-files: true
+        if-no-files-found: error
+    - name: Upload pages
+      uses: actions/upload-pages-artifact@v3
+      with:
+        path: 'api/build/javadoc'
+    - name: Deploy to GitHub Pages
+      id: deployment
+      uses: actions/deploy-pages@v4
+

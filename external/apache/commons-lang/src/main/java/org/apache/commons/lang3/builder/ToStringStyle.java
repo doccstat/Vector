@@ -590,6 +590,18 @@ public abstract class ToStringStyle implements Serializable {
      */
 
     /**
+     * A per-thread set of objects already rendered in detail during the current top-level
+     * {@code reflectionToString} call. Unlike {@link #REGISTRY}, which is a depth-first visit
+     * <em>stack</em> (entries are removed when a visit completes) and therefore only detects
+     * cycles, this set is only cleared when the top-level call completes. Styles that recurse
+     * into arbitrary object graphs (see {@link RecursiveToStringStyle}) consult it so that shared
+     * (acyclic) references are detailed at most once per top-level call, keeping traversal cost
+     * linear in the size of the object graph instead of exponential on reference diamonds.
+     * Identity-based for the same reason as {@link #REGISTRY}. Empty unless such a style is in use.
+     */
+    private static final ThreadLocal<IdentityHashMap<Object, Object>> VISITED = ThreadLocal.withInitial(IdentityHashMap::new);
+
+    /**
      * Gets the registry of objects being traversed by the {@code reflectionToString} methods in the current thread.
      *
      * @return Set the registry of objects being traversed.
@@ -606,6 +618,31 @@ public abstract class ToStringStyle implements Serializable {
      */
     static boolean isRegistered(final Object value) {
         return getRegistry().containsKey(value);
+    }
+
+    /**
+     * Tests whether the given object has already been rendered in detail during the current
+     * top-level {@code reflectionToString} call. Used by graph-recursing styles to avoid
+     * exponential re-traversal of shared (acyclic) references.
+     *
+     * @param value The object to look up in the visited set.
+     * @return {@code true} if the object was already visited in this top-level call.
+     */
+    static boolean isVisited(final Object value) {
+        return VISITED.get().containsKey(value);
+    }
+
+    /**
+     * Marks the given object as rendered in detail for the current top-level
+     * {@code reflectionToString} call. The mark is cleared when the top-level call completes
+     * (when the visit stack in {@link #REGISTRY} empties).
+     *
+     * @param value The object to mark as visited.
+     */
+    static void markVisited(final Object value) {
+        if (value != null) {
+            VISITED.get().put(value, null);
+        }
     }
 
     /**
@@ -634,6 +671,8 @@ public abstract class ToStringStyle implements Serializable {
             m.remove(value);
             if (m.isEmpty()) {
                 REGISTRY.remove();
+                // The top-level reflectionToString call is complete: clear the visited set as well.
+                VISITED.remove();
             }
         }
     }
@@ -1430,11 +1469,14 @@ public abstract class ToStringStyle implements Serializable {
      * @param object The {@link Object} to build a {@code toString} for.
      */
     public void appendEnd(final StringBuffer buffer, final Object object) {
-        if (!isFieldSeparatorAtEnd()) {
-            removeLastFieldSeparator(buffer);
+        try {
+            if (!isFieldSeparatorAtEnd()) {
+                removeLastFieldSeparator(buffer);
+            }
+            appendContentEnd(buffer);
+        } finally {
+            unregister(object);
         }
-        appendContentEnd(buffer);
-        unregister(object);
     }
 
     /**
@@ -1940,7 +1982,7 @@ public abstract class ToStringStyle implements Serializable {
     }
 
     /**
-     * Gets whether to output array content detail.
+     * Tests whether to output array content detail.
      *
      * @return The current array content detail setting.
      */
@@ -1949,7 +1991,7 @@ public abstract class ToStringStyle implements Serializable {
     }
 
     /**
-     * Gets whether to use full detail when the caller doesn't specify.
+     * Tests whether full detail is used when the caller does not specify a detail level.
      *
      * @return The current defaultFullDetail flag.
      */
@@ -1958,7 +2000,7 @@ public abstract class ToStringStyle implements Serializable {
     }
 
     /**
-     * Gets whether the field separator should be added at the end of each buffer.
+     * Tests whether the field separator should be added at the end of each buffer.
      *
      * @return fieldSeparatorAtEnd flag.
      * @since 2.0
@@ -1968,7 +2010,7 @@ public abstract class ToStringStyle implements Serializable {
     }
 
     /**
-     * Gets whether the field separator should be added at the start of each buffer.
+     * Tests whether the field separator should be added at the start of each buffer.
      *
      * @return The fieldSeparatorAtStart flag.
      * @since 2.0
@@ -1978,7 +2020,7 @@ public abstract class ToStringStyle implements Serializable {
     }
 
     /**
-     * Is this field to be output in full detail.
+     * Tests whether this field should be output in full detail.
      *
      * <p>
      * This method converts a detail request into a detail level. The calling code may request full detail ({@code true}), but a subclass might ignore that and
@@ -2000,7 +2042,7 @@ public abstract class ToStringStyle implements Serializable {
     // These methods are not expected to be overridden, except to make public
     // (They are not public so that immutable subclasses can be written)
     /**
-     * Gets whether to use the class name.
+     * Tests whether to use the class name.
      *
      * @return The current useClassName flag.
      */
@@ -2009,7 +2051,7 @@ public abstract class ToStringStyle implements Serializable {
     }
 
     /**
-     * Gets whether to use the field names passed in.
+     * Tests whether to use the field names passed in.
      *
      * @return The current useFieldNames flag.
      */
@@ -2018,7 +2060,7 @@ public abstract class ToStringStyle implements Serializable {
     }
 
     /**
-     * Gets whether to use the identity hash code.
+     * Tests whether to use the identity hash code.
      *
      * @return The current useIdentityHashCode flag.
      */
@@ -2027,7 +2069,7 @@ public abstract class ToStringStyle implements Serializable {
     }
 
     /**
-     * Gets whether to output short or long class names.
+     * Tests whether short class names should be output.
      *
      * @return The current useShortClassName flag.
      * @since 2.0

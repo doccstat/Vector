@@ -41,10 +41,11 @@ function (add_fmt_test name)
 endfunction ()
 
 add_fmt_test(args-test)
-add_fmt_test(base-test)
+add_fmt_test(core-test)
 add_fmt_test(assert-test)
 add_fmt_test(chrono-test)
 add_fmt_test(color-test)
+add_fmt_test(enum-test)
 add_fmt_test(gtest-extra-test)
 add_fmt_test(format-test mock-allocator.h)
 if (MSVC)
@@ -127,12 +128,16 @@ if (FMT_PEDANTIC)
     target_compile_options(noexception-test PRIVATE ${PEDANTIC_COMPILE_FLAGS})
   endif ()
 
-  # Test that the library compiles without locale.
-  add_library(nolocale-test ../src/format.cc)
+  # Test that the library works without locale support.
+  add_executable(nolocale-test format-test.cc mock-allocator.h ${TEST_MAIN_SRC}
+                               ../src/format.cc ../src/os.cc)
   target_include_directories(nolocale-test
                              PRIVATE ${PROJECT_SOURCE_DIR}/include)
-  target_compile_definitions(nolocale-test
-                             PRIVATE FMT_STATIC_THOUSANDS_SEPARATOR=1)
+  target_compile_definitions(nolocale-test PRIVATE FMT_USE_LOCALE=0)
+  target_link_libraries(nolocale-test gtest)
+  target_compile_options(nolocale-test
+                         PRIVATE $<$<CXX_COMPILER_ID:MSVC>:/utf-8>)
+  add_test(NAME nolocale-test COMMAND nolocale-test)
 endif ()
 
 # These tests are disabled on Windows because they take too long.

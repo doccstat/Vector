@@ -21,11 +21,15 @@ import java.util.Objects;
 /**
  * Operations on char primitives and Character objects.
  *
- * <p>This class tries to handle {@code null} input gracefully.
+ * <p>
+ * This class tries to handle {@code null} input gracefully.
  * An exception will not be thrown for a {@code null} input.
- * Each method documents its behavior in more detail.</p>
+ * Each method documents its behavior in more detail.
+ * </p>
  *
- * <p>#ThreadSafe#</p>
+ * <p>
+ * #ThreadSafe#
+ * </p>
  *
  * @since 2.1
  */
@@ -333,7 +337,7 @@ public class CharUtils {
      *
      * @param ch  The character to convert
      * @return The char value of the Character
-     * @throws NullPointerException if the Character is null
+     * @throws NullPointerException Thrown if the Character is null.
      */
     public static char toChar(final Character ch) {
         return Objects.requireNonNull(ch, "ch").charValue();
@@ -369,8 +373,8 @@ public class CharUtils {
      *
      * @param str  The character to convert
      * @return The char value of the first letter of the String
-     * @throws NullPointerException if the string is null
-     * @throws IllegalArgumentException if the String is empty
+     * @throws NullPointerException Thrown if the string is null.
+     * @throws IllegalArgumentException Thrown if the String is empty.
      */
     public static char toChar(final String str) {
         Validate.notEmpty(str, "The String must not be empty");
@@ -412,8 +416,10 @@ public class CharUtils {
      * Converts the String to a Character using the first character, returning
      * null for empty Strings.
      *
-     * <p>For ASCII 7 bit characters, this uses a cache that will return the
-     * same Character object each time.</p>
+     * <p>
+     * For ASCII 7 bit characters, this uses a cache that will return the
+     * same Character object each time.
+     * </p>
      *
      * <pre>
      *   CharUtils.toCharacterObject(null) = null
@@ -433,7 +439,9 @@ public class CharUtils {
      * Converts the character to the Integer it represents, throwing an
      * exception if the character is not numeric.
      *
-     * <p>This method converts the char '1' to the int 1 and so on.</p>
+     * <p>
+     * This method converts the char '1' to the int 1 and so on.
+     * </p>
      *
      * <pre>
      *   CharUtils.toIntValue('3')  = 3
@@ -442,7 +450,7 @@ public class CharUtils {
      *
      * @param ch  The character to convert
      * @return The int value of the character
-     * @throws IllegalArgumentException if the character is not ASCII numeric
+     * @throws IllegalArgumentException Thrown if the character is not ASCII numeric.
      */
     public static int toIntValue(final char ch) {
         if (!isAsciiNumeric(ch)) {
@@ -455,7 +463,9 @@ public class CharUtils {
      * Converts the character to the Integer it represents, throwing an
      * exception if the character is not numeric.
      *
-     * <p>This method converts the char '1' to the int 1 and so on.</p>
+     * <p>
+     * This method converts the char '1' to the int 1 and so on.
+     * </p>
      *
      * <pre>
      *   CharUtils.toIntValue('3', -1)  = 3
@@ -474,7 +484,9 @@ public class CharUtils {
      * Converts the character to the Integer it represents, throwing an
      * exception if the character is not numeric.
      *
-     * <p>This method converts the char '1' to the int 1 and so on.</p>
+     * <p>
+     * This method converts the char '1' to the int 1 and so on.
+     * </p>
      *
      * <pre>
      *   CharUtils.toIntValue('3')  = 3
@@ -484,8 +496,8 @@ public class CharUtils {
      *
      * @param ch  The character to convert, not null
      * @return The int value of the character
-     * @throws NullPointerException if the Character is null
-     * @throws IllegalArgumentException if the Character is not ASCII numeric
+     * @throws NullPointerException Thrown if the Character is null.
+     * @throws IllegalArgumentException Thrown if the Character is not ASCII numeric.
      */
     public static int toIntValue(final Character ch) {
         return toIntValue(toChar(ch));
@@ -495,7 +507,9 @@ public class CharUtils {
      * Converts the character to the Integer it represents, throwing an
      * exception if the character is not numeric.
      *
-     * <p>This method converts the char '1' to the int 1 and so on.</p>
+     * <p>
+     * This method converts the char '1' to the int 1 and so on.
+     * </p>
      *
      * <pre>
      *   CharUtils.toIntValue(null, -1) = -1
@@ -514,8 +528,10 @@ public class CharUtils {
     /**
      * Converts the character to a String that contains the one character.
      *
-     * <p>For ASCII 7 bit characters, this uses a cache that will return the
-     * same String object each time.</p>
+     * <p>
+     * For ASCII 7 bit characters, this uses a cache that will return the
+     * same String object each time.
+     * </p>
      *
      * <pre>
      *   CharUtils.toString(' ')  = " "
@@ -535,10 +551,14 @@ public class CharUtils {
     /**
      * Converts the character to a String that contains the one character.
      *
-     * <p>For ASCII 7 bit characters, this uses a cache that will return the
-     * same String object each time.</p>
+     * <p>
+     * For ASCII 7 bit characters, this uses a cache that will return the
+     * same String object each time.
+     * </p>
      *
-     * <p>If {@code null} is passed in, {@code null} will be returned.</p>
+     * <p>
+     * If {@code null} is passed in, {@code null} will be returned.
+     * </p>
      *
      * <pre>
      *   CharUtils.toString(null) = null
@@ -556,7 +576,9 @@ public class CharUtils {
     /**
      * Converts the string to the Unicode format '\u0020'.
      *
-     * <p>This format is the Java source code format.</p>
+     * <p>
+     * This format is the Java source code format.
+     * </p>
      *
      * <pre>
      *   CharUtils.unicodeEscaped(' ') = "\u0020"
@@ -577,9 +599,13 @@ public class CharUtils {
     /**
      * Converts the string to the Unicode format '\u0020'.
      *
-     * <p>This format is the Java source code format.</p>
+     * <p>
+     * This format is the Java source code format.
+     * </p>
      *
-     * <p>If {@code null} is passed in, {@code null} will be returned.</p>
+     * <p>
+     * If {@code null} is passed in, {@code null} will be returned.
+     * </p>
      *
      * <pre>
      *   CharUtils.unicodeEscaped(null) = null
@@ -598,8 +624,10 @@ public class CharUtils {
      * {@link CharUtils} instances should NOT be constructed in standard programming.
      * Instead, the class should be used as {@code CharUtils.toString('c');}.
      *
-     * <p>This constructor is public to permit tools that require a JavaBean instance
-     * to operate.</p>
+     * <p>
+     * This constructor is public to permit tools that require a JavaBean instance
+     * to operate.
+     * </p>
      *
      * @deprecated TODO Make private in 4.0.
      */

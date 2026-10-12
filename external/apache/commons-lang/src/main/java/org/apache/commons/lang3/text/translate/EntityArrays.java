@@ -213,7 +213,7 @@ public class EntityArrays {
         {"\u21D0", "&lArr;"}, // leftwards double arrow, U+21D0 ISOtech -->
         // <!-- ISO 10646 does not say that lArr is the same as the 'is implied by'
         // arrow but also does not have any other character for that function.
-        // So ? lArr canbe used for 'is implied by' as ISOtech suggests -->
+        // So ? lArr can be used for 'is implied by' as ISOtech suggests -->
         {"\u21D1", "&uArr;"}, // upwards double arrow, U+21D1 ISOamsa -->
         {"\u21D2", "&rArr;"}, // rightwards double arrow, U+21D2 ISOtech -->
         // <!-- ISO 10646 does not say this is the 'implies' character but does not
@@ -330,6 +330,7 @@ public class EntityArrays {
     private static final String[][] HTML40_EXTENDED_UNESCAPE = invert(HTML40_EXTENDED_ESCAPE);
 
     private static final String[][] BASIC_ESCAPE = {
+        {"'", "&#39;"},   // ' - apostrophe
         {"\"", "&quot;"}, // " - double-quote
         {"&", "&amp;"},   // & - ampersand
         {"<", "&lt;"},    // < - less-than
@@ -375,7 +376,9 @@ public class EntityArrays {
     /**
      * Mapping to escape the basic XML and HTML character entities.
      *
-     * Namely: {@code " & < >}
+     * <p>
+     * Namely: {@code " ' & < >}. The apostrophe is escaped as the numeric reference {@code &#39;}.
+     * </p>
      *
      * @return The mapping table.
      */

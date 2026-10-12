@@ -26,6 +26,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -35,6 +36,7 @@ import java.io.StringWriter;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -48,6 +50,46 @@ import org.junit.jupiter.api.Test;
  * Tests {@link ExceptionUtils}.
  */
 class ExceptionUtilsTest extends AbstractLangTest {
+
+    private static final class CountingException extends Exception {
+        private static final long serialVersionUID = 1L;
+
+        private int causeCalls;
+
+        CountingException(final Throwable cause) {
+            super(null, cause, false, false);
+        }
+
+        @Override
+        public boolean equals(final Object obj) {
+            throw new AssertionError("Chain walking must not invoke equals");
+        }
+
+        @Override
+        public synchronized Throwable getCause() {
+            causeCalls++;
+            return super.getCause();
+        }
+
+        @Override
+        public int hashCode() {
+            throw new AssertionError("Chain walking must not invoke hashCode");
+        }
+    }
+
+    private static final class EqualException extends Exception {
+        private static final long serialVersionUID = 1L;
+
+        @Override
+        public boolean equals(final Object obj) {
+            return obj instanceof EqualException;
+        }
+
+        @Override
+        public int hashCode() {
+            return 1;
+        }
+    }
 
     /**
      * Provides a method with a well known chained/nested exception
@@ -391,6 +433,95 @@ class ExceptionUtilsTest extends AbstractLangTest {
         assertFalse(match);
     }
 
+    /**
+     * Tests that ordinary message lines whose first non-whitespace characters happen to be "at" are no longer mistaken for stack
+     * frames, so a multi-line untrusted message can neither inject a non-frame-shaped line into the frame list nor suppress the
+     * real frames that follow it.
+     */
+    @Test
+    void testGetRootCauseStackTraceMessageLinesNotMistakenForFrames() {
+        final Throwable t = new IllegalArgumentException(
+                "denied" + System.lineSeparator() + " attack detected" + System.lineSeparator() + "at your request, more text");
+        final String[] stackTrace = ExceptionUtils.getRootCauseStackTrace(t);
+        // No fabricated entries: every frame line after the header parses as "at <ref>(...".
+        boolean sawRealFrame = false;
+        for (int i = 1; i < stackTrace.length; i++) {
+            final String element = stackTrace[i];
+            if (element.contains("attack detected") || element.contains("at your request")) {
+                fail("message text classified as a stack frame: " + element);
+            }
+            if (element.contains(getClass().getSimpleName())) {
+                sawRealFrame = true;
+            }
+        }
+        // The real frames survive: this test method must be present in the parsed trace.
+        assertTrue(sawRealFrame, "real frames were suppressed");
+    }
+
+    /**
+     * Tests that every frame shape {@code StackTraceElement.toString()} can emit is accepted by the tightened frame matcher,
+     * in particular JDK 9+ module-versioned frames ({@code mod@version/pkg.Class}), which a character whitelist without
+     * {@code '@'} would reject — silently dropping that frame and every real frame below it. Uses a throwable that prints a
+     * fixed trace so the shapes are deterministic without constructing module-versioned {@link StackTraceElement}s.
+     */
+    @Test
+    void testGetStackFrameListAcceptsAllRealFrameShapes() {
+        final String[] frames = {
+            "\tat com.example.Foo.bar(Foo.java:42)",                                            // classic
+            "\tat app//com.foo.Main.main(Main.java:10)",                                        // class loader prefix
+            "\tat com.foo.mod@1.0.3/com.foo.Helper.help(Helper.java:7)",                        // module name @ version
+            "\tat java.base/java.lang.Thread.run(Thread.java:833)",                             // module, no version
+            "\tat com.foo.Main$$Lambda$17/0x0000000800c02a48.run(Unknown Source)",              // lambda / hidden class
+            "\tat com.example.Foo.<init>(Foo.java:5)",                                          // constructor
+            "\tat java.base/java.lang.Object.wait(Native Method)"                               // native
+        };
+        final StringBuilder text = new StringBuilder("java.lang.RuntimeException: boom").append(System.lineSeparator());
+        for (final String frame : frames) {
+            text.append(frame).append(System.lineSeparator());
+        }
+        final Throwable fixed = new RuntimeException("boom") {
+            private static final long serialVersionUID = 1L;
+
+            @Override
+            public void printStackTrace(final PrintWriter writer) {
+                writer.print(text);
+            }
+        };
+        final List<String> list = ExceptionUtils.getStackFrameList(fixed);
+        assertEquals(Arrays.asList(frames), list, "a legitimate frame shape was rejected (and frames below it dropped)");
+    }
+
+    /**
+     * Tests that message text is still rejected by the frame matcher: forged lines lacking the no-whitespace-before-'('
+     * frame syntax must not start or extend the frame list.
+     */
+    @Test
+    void testGetStackFrameListRejectsForgedMessageLines() {
+        final String[] forged = {
+            " attack detected",                              // "at" not followed by space-delimited reference
+            "at your request, more text",                    // no leading whitespace
+            "\tat your request, more text",                  // no '(' at all
+            "\tat forged frame entry(Evil.java:1)",          // whitespace between "at " and '('
+            "\tat (Evil.java:1)"                             // empty reference
+        };
+        final StringBuilder text = new StringBuilder("java.lang.RuntimeException: boom").append(System.lineSeparator());
+        for (final String line : forged) {
+            text.append(line).append(System.lineSeparator());
+        }
+        text.append("\tat com.example.Foo.bar(Foo.java:42)").append(System.lineSeparator());
+        final Throwable fixed = new RuntimeException("boom") {
+            private static final long serialVersionUID = 1L;
+
+            @Override
+            public void printStackTrace(final PrintWriter writer) {
+                writer.print(text);
+            }
+        };
+        final List<String> list = ExceptionUtils.getStackFrameList(fixed);
+        assertEquals(Arrays.asList("\tat com.example.Foo.bar(Foo.java:42)"), list,
+                "forged message text was classified as a stack frame");
+    }
+
     @Test
     /** getStackFrames returns empty string array when the argument is null */
     void testgetStackFramesHappyPath() {
@@ -478,6 +609,59 @@ class ExceptionUtilsTest extends AbstractLangTest {
         final List<?> throwables = ExceptionUtils.getThrowableList(withoutCause);
         assertEquals(1, throwables.size());
         assertSame(withoutCause, throwables.get(0));
+    }
+
+    @Test
+    void testGetThrowableListDeepChain() {
+        final CountingException[] chain = new CountingException[10_000];
+        for (int i = chain.length - 1; i >= 0; i--) {
+            chain[i] = new CountingException(i + 1 < chain.length ? chain[i + 1] : null);
+        }
+        final List<Throwable> throwables = ExceptionUtils.getThrowableList(chain[0]);
+        assertEquals(chain.length, throwables.size());
+        for (int i = 0; i < chain.length; i++) {
+            assertSame(chain[i], throwables.get(i));
+            assertEquals(1, chain[i].causeCalls);
+        }
+        assertEquals(chain.length, ExceptionUtils.getThrowableCount(chain[0]));
+        assertSame(chain[chain.length - 1], ExceptionUtils.getRootCause(chain[0]));
+        final Throwable[] array = ExceptionUtils.getThrowables(chain[0]);
+        final Throwable[] stream = ExceptionUtils.stream(chain[0]).toArray(Throwable[]::new);
+        assertEquals(chain.length, array.length);
+        assertEquals(chain.length, stream.length);
+        for (int i = 0; i < chain.length; i++) {
+            assertSame(chain[i], array[i]);
+            assertSame(chain[i], stream[i]);
+        }
+    }
+
+    @Test
+    void testGetThrowableListEqualExceptions() {
+        final EqualException first = new EqualException();
+        final EqualException second = new EqualException();
+        final EqualException third = new EqualException();
+        first.initCause(second);
+        second.initCause(third);
+        final List<Throwable> throwables = ExceptionUtils.getThrowableList(first);
+        assertEquals(3, throwables.size());
+        assertSame(first, throwables.get(0));
+        assertSame(second, throwables.get(1));
+        assertSame(third, throwables.get(2));
+        third.initCause(second);
+        final List<Throwable> cyclic = ExceptionUtils.getThrowableList(first);
+        assertEquals(3, cyclic.size());
+        assertSame(first, cyclic.get(0));
+        assertSame(second, cyclic.get(1));
+        assertSame(third, cyclic.get(2));
+    }
+
+    @Test
+    void testGetThrowableListSelfCause() {
+        final ExceptionWithCause exception = new ExceptionWithCause(null);
+        exception.setCause(exception);
+        final List<Throwable> throwables = ExceptionUtils.getThrowableList(exception);
+        assertEquals(1, throwables.size());
+        assertSame(exception, throwables.get(0));
     }
 
     @Test

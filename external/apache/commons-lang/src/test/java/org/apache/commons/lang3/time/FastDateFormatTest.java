@@ -35,6 +35,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.Locale;
+import java.util.SimpleTimeZone;
 import java.util.TimeZone;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -219,6 +220,36 @@ class FastDateFormatTest extends AbstractLangTest {
         assertEquals(Locale.GERMANY, format3.getLocale());
     }
 
+    /**
+     * The instance cache is bounded: once it reaches its size limit, it is flushed rather than
+     * growing without bound per distinct pattern.
+     */
+    @Test
+    void test_instanceCacheIsBounded() {
+        FastDateFormat.clear();
+        final FastDateFormat first = FastDateFormat.getInstance("yyyy-MM-dd");
+        assertSame(first, FastDateFormat.getInstance("yyyy-MM-dd"));
+        // Exceed the cache bound with distinct patterns; the cache must flush, not grow forever.
+        for (int i = 0; i <= AbstractFormatCache.MAX_CACHE_SIZE; i++) {
+            FastDateFormat.getInstance("'p" + i + "'yyyy");
+        }
+        assertNotSame(first, FastDateFormat.getInstance("yyyy-MM-dd"), "Cache was not flushed at its bound");
+        FastDateFormat.clear();
+    }
+
+    /**
+     * Tests the public cache-flush entry point.
+     */
+    @Test
+    void test_publicClearCache() {
+        final FastDateFormat format1 = FastDateFormat.getInstance("yyyy-MM-dd'T'HH");
+        assertSame(format1, FastDateFormat.getInstance("yyyy-MM-dd'T'HH"));
+        FastDateFormat.clear();
+        final FastDateFormat format2 = FastDateFormat.getInstance("yyyy-MM-dd'T'HH");
+        assertNotSame(format1, format2);
+        assertEquals(format1, format2);
+    }
+
     @Test
     @ReadsDefaultLocale
     @ReadsDefaultTimeZone
@@ -354,7 +385,7 @@ class FastDateFormatTest extends AbstractLangTest {
     /**
      * Tests [LANG-1767] FastDateFormat.parse can not recognize "CEST" Timezone.
      *
-     * @throws ParseException Throws on test failure.
+     * @throws ParseException Thrown if an operation in the test fails.
      */
     @Test
     void testParseCentralEuropeanSummerTime() throws ParseException {
@@ -447,5 +478,54 @@ class FastDateFormatTest extends AbstractLangTest {
                 FastDateFormat.getTimeInstance(FastDateFormat.LONG, TimeZones.getTimeZone("America/New_York"), Locale.getDefault()));
         assertEquals(FastDateFormat.getTimeInstance(FastDateFormat.LONG),
                 FastDateFormat.getTimeInstance(FastDateFormat.LONG, TimeZone.getDefault(), Locale.getDefault()));
+    }
+
+    /**
+     * Mutating the TimeZone passed to the factory must not change the cached, shared instance.
+     */
+    @Test
+    void testTimeZoneArgumentIsCopied() throws ParseException {
+        final TimeZone timeZone = TimeZones.getTimeZone("UTC");
+        final FastDateFormat printer = FastDateFormat.getInstance("yyyy-MM-dd HH:mm Z", timeZone, Locale.US);
+        final FastDateFormat parser = FastDateFormat.getInstance("yyyy-MM-dd HH:mm", timeZone, Locale.US);
+        timeZone.setRawOffset(5 * 3_600_000);
+        assertEquals(TimeZones.getTimeZone("UTC"), printer.getTimeZone());
+        assertEquals("1970-01-01 00:00 +0000", printer.format(new Date(0)));
+        assertEquals(new Date(0), parser.parse("1970-01-01 00:00"));
+    }
+
+    @Test
+    void testTimeZoneCacheKeyIsCopied() throws ParseException {
+        final SimpleTimeZone timeZone = new SimpleTimeZone(0, "CacheKeyCopy", Calendar.MARCH, 1, 0, 0, Calendar.OCTOBER, 1, 0, 0);
+        timeZone.setStartYear(2000);
+        final TimeZone originalTimeZone = (TimeZone) timeZone.clone();
+        final String pattern = "yyyy-MM-dd HH:mm";
+        final FastDateFormat original = FastDateFormat.getInstance(pattern, timeZone, Locale.US);
+        final Date date = Date.from(Instant.parse("2026-06-01T00:00:00Z"));
+        assertEquals("2026-06-01 01:00", original.format(date));
+
+        // Changing the DST start year preserves the hash code but changes the zone's rules and equality.
+        timeZone.setStartYear(2100);
+        final FastDateFormat changed = FastDateFormat.getInstance(pattern, (TimeZone) timeZone.clone(), Locale.US);
+        assertNotSame(original, changed);
+        assertSame(original, FastDateFormat.getInstance(pattern, originalTimeZone, Locale.US));
+        assertEquals("2026-06-01 01:00", original.format(date));
+        assertEquals("2026-06-01 00:00", changed.format(date));
+        assertEquals(date, original.parse("2026-06-01 01:00"));
+        assertEquals(date, changed.parse("2026-06-01 00:00"));
+    }
+
+    /**
+     * Mutating the TimeZone returned by the getter must not change the cached, shared instance.
+     */
+    @Test
+    void testTimeZoneGetterReturnsCopy() throws ParseException {
+        final FastDateFormat printer = FastDateFormat.getInstance("yyyy-MM-dd HH:mm:ss Z", TimeZones.getTimeZone("UTC"), Locale.US);
+        final FastDateFormat parser = FastDateFormat.getInstance("yyyy-MM-dd HH:mm:ss", TimeZones.getTimeZone("UTC"), Locale.US);
+        printer.getTimeZone().setRawOffset(5 * 3_600_000);
+        parser.getTimeZone().setRawOffset(5 * 3_600_000);
+        assertEquals(TimeZones.getTimeZone("UTC"), printer.getTimeZone());
+        assertEquals("1970-01-01 00:00:00 +0000", printer.format(new Date(0)));
+        assertEquals(new Date(0), parser.parse("1970-01-01 00:00:00"));
     }
 }

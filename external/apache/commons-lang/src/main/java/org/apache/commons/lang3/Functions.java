@@ -78,7 +78,9 @@ public class Functions {
     /**
      * A functional interface like {@link BiConsumer} that declares a {@link Throwable}.
      *
-     * <p>TODO for 4.0: Move to org.apache.commons.lang3.function.</p>
+     * <p>
+     * TODO for 4.0: Move to org.apache.commons.lang3.function.
+     * </p>
      *
      * @param <O1> Consumed type 1.
      * @param <O2> Consumed type 2.
@@ -102,7 +104,9 @@ public class Functions {
     /**
      * A functional interface like {@link BiFunction} that declares a {@link Throwable}.
      *
-     * <p>TODO for 4.0: Move to org.apache.commons.lang3.function.</p>
+     * <p>
+     * TODO for 4.0: Move to org.apache.commons.lang3.function.
+     * </p>
      *
      * @param <O1> Input type 1.
      * @param <O2> Input type 2.
@@ -128,7 +132,9 @@ public class Functions {
     /**
      * A functional interface like {@link BiPredicate} that declares a {@link Throwable}.
      *
-     * <p>TODO for 4.0: Move to org.apache.commons.lang3.function.</p>
+     * <p>
+     * TODO for 4.0: Move to org.apache.commons.lang3.function.
+     * </p>
      *
      * @param <O1> Predicate type 1.
      * @param <O2> Predicate type 2.
@@ -145,7 +151,7 @@ public class Functions {
          * @param object1 The first object to test the predicate on
          * @param object2 The second object to test the predicate on
          * @return The predicate's evaluation
-         * @throws T if the predicate fails
+         * @throws T Thrown if the predicate fails.
          */
         boolean test(O1 object1, O2 object2) throws T;
     }
@@ -153,7 +159,9 @@ public class Functions {
     /**
      * A functional interface like {@link java.util.concurrent.Callable} that declares a {@link Throwable}.
      *
-     * <p>TODO for 4.0: Move to org.apache.commons.lang3.function.</p>
+     * <p>
+     * TODO for 4.0: Move to org.apache.commons.lang3.function.
+     * </p>
      *
      * @param <R> Return type.
      * @param <T> Thrown exception.
@@ -167,7 +175,7 @@ public class Functions {
          * Calls the callable.
          *
          * @return The value returned from the callable
-         * @throws T if the callable fails
+         * @throws T Thrown if the callable fails.
          */
         R call() throws T;
     }
@@ -175,7 +183,9 @@ public class Functions {
     /**
      * A functional interface like {@link Consumer} that declares a {@link Throwable}.
      *
-     * <p>TODO for 4.0: Move to org.apache.commons.lang3.function.</p>
+     * <p>
+     * TODO for 4.0: Move to org.apache.commons.lang3.function.
+     * </p>
      *
      * @param <O> Consumed type 1.
      * @param <T> Thrown exception.
@@ -197,7 +207,9 @@ public class Functions {
     /**
      * A functional interface like {@link Function} that declares a {@link Throwable}.
      *
-     * <p>TODO for 4.0: Move to org.apache.commons.lang3.function.</p>
+     * <p>
+     * TODO for 4.0: Move to org.apache.commons.lang3.function.
+     * </p>
      *
      * @param <I> Input type 1.
      * @param <R> Return type.
@@ -221,7 +233,9 @@ public class Functions {
     /**
      * A functional interface like {@link Predicate} that declares a {@link Throwable}.
      *
-     * <p>TODO for 4.0: Move to org.apache.commons.lang3.function.</p>
+     * <p>
+     * TODO for 4.0: Move to org.apache.commons.lang3.function.
+     * </p>
      *
      * @param <I> Predicate type 1.
      * @param <T> Thrown exception.
@@ -236,7 +250,7 @@ public class Functions {
          *
          * @param object The object to test the predicate on
          * @return The predicate's evaluation
-         * @throws T if the predicate fails
+         * @throws T Thrown if the predicate fails.
          */
         boolean test(I object) throws T;
     }
@@ -244,7 +258,9 @@ public class Functions {
     /**
      * A functional interface like {@link Runnable} that declares a {@link Throwable}.
      *
-     * <p>TODO for 4.0: Move to org.apache.commons.lang3.function.</p>
+     * <p>
+     * TODO for 4.0: Move to org.apache.commons.lang3.function.
+     * </p>
      *
      * @param <T> Thrown exception.
      * @deprecated Use {@link org.apache.commons.lang3.function.FailableRunnable}.
@@ -264,7 +280,9 @@ public class Functions {
     /**
      * A functional interface like {@link Supplier} that declares a {@link Throwable}.
      *
-     * <p>TODO for 4.0: Move to org.apache.commons.lang3.function.</p>
+     * <p>
+     * TODO for 4.0: Move to org.apache.commons.lang3.function.
+     * </p>
      *
      * @param <R> Return type.
      * @param <T> Thrown exception.
@@ -275,10 +293,10 @@ public class Functions {
     public interface FailableSupplier<R, T extends Throwable> {
 
         /**
-         * Supplies an object
+         * Gets an object.
          *
          * @return A result
-         * @throws T if the supplier fails
+         * @throws T Thrown if the supplier fails.
          */
         R get() throws T;
     }
@@ -466,10 +484,10 @@ public class Functions {
     }
 
     /**
-     * Invokes a supplier, and returns the result.
+     * Gets the result of invoking the supplier.
      *
      * @param supplier The supplier to invoke.
-     * @param <O> The suppliers output type.
+     * @param <O> The supplier's output type.
      * @param <T> The type of checked exception, which the supplier can throw.
      * @return The object, which has been created by the supplier
      * @since 3.10
@@ -483,7 +501,7 @@ public class Functions {
     }
 
     /**
-     * Invokes a boolean supplier, and returns the result.
+     * Gets the result of invoking the boolean supplier.
      *
      * @param supplier The boolean supplier to invoke.
      * @param <T> The type of checked exception, which the supplier can throw.

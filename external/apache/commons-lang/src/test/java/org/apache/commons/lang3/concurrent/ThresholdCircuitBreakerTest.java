@@ -18,6 +18,7 @@ package org.apache.commons.lang3.concurrent;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.apache.commons.lang3.AbstractLangTest;
@@ -54,6 +55,28 @@ class ThresholdCircuitBreakerTest extends AbstractLangTest {
     void testGettingThreshold() {
         final ThresholdCircuitBreaker circuit = new ThresholdCircuitBreaker(threshold);
         assertEquals(Long.valueOf(threshold), Long.valueOf(circuit.getThreshold()), "Wrong value of threshold");
+    }
+
+    /**
+     * Tests that a negative increment is rejected: the counter must only move toward the threshold.
+     */
+    @Test
+    void testNegativeIncrementRejected() {
+        final ThresholdCircuitBreaker circuit = new ThresholdCircuitBreaker(threshold);
+        assertThrows(IllegalArgumentException.class, () -> circuit.incrementAndCheckState(-1L), "Negative increments must be rejected");
+    }
+
+    /**
+     * Tests that overflowing the internal counter saturates and opens the circuit breaker instead of wrapping negative and silently disabling the trip
+     * condition.
+     */
+    @Test
+    void testOverflowSaturatesAndOpens() {
+        final ThresholdCircuitBreaker circuit = new ThresholdCircuitBreaker(Long.MAX_VALUE);
+        circuit.incrementAndCheckState(Long.MAX_VALUE);
+        // Without saturation this would wrap negative and report the circuit closed forever.
+        assertFalse(circuit.incrementAndCheckState(1L), "Overflow must open the circuit, not wrap the counter");
+        assertFalse(circuit.checkState(), "Circuit must stay open after overflow");
     }
 
     /**

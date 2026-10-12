@@ -94,8 +94,10 @@ import org.apache.commons.lang3.stream.Streams;
  *      - the number of changes needed to change one String into another</li>
  * </ul>
  *
- * <p>The {@link StringUtils} class defines certain words related to
- * String handling.</p>
+ * <p>
+ * The {@link StringUtils} class defines certain words related to
+ * String handling.
+ * </p>
  *
  * <ul>
  *  <li>null - {@code null}</li>
@@ -105,19 +107,27 @@ import org.apache.commons.lang3.stream.Streams;
  *  <li>trim - the characters &lt;= 32 as in {@link String#trim()}</li>
  * </ul>
  *
- * <p>{@link StringUtils} handles {@code null} input Strings quietly.
+ * <p>
+ * {@link StringUtils} handles {@code null} input Strings quietly.
  * That is to say that a {@code null} input will return {@code null}.
  * Where a {@code boolean} or {@code int} is being returned
- * details vary by method.</p>
+ * details vary by method.
+ * </p>
  *
- * <p>A side effect of the {@code null} handling is that a
+ * <p>
+ * A side effect of the {@code null} handling is that a
  * {@link NullPointerException} should be considered a bug in
- * {@link StringUtils}.</p>
+ * {@link StringUtils}.
+ * </p>
  *
- * <p>Methods in this class include sample code in their Javadoc comments to explain their operation.
- * The symbol {@code *} is used to indicate any input including {@code null}.</p>
+ * <p>
+ * Methods in this class include sample code in their Javadoc comments to explain their operation.
+ * The symbol {@code *} is used to indicate any input including {@code null}.
+ * </p>
  *
- * <p>#ThreadSafe#</p>
+ * <p>
+ * #ThreadSafe#
+ * </p>
  *
  * @see String
  * @since 1.0
@@ -231,7 +241,7 @@ public class StringUtils {
      * @param str      The String to check, may be null.
      * @param maxWidth maximum length of result String, must be at least 4.
      * @return abbreviated String, {@code null} if null String input.
-     * @throws IllegalArgumentException if the width is too small.
+     * @throws IllegalArgumentException Thrown if the width is too small.
      * @since 2.0
      */
     public static String abbreviate(final String str, final int maxWidth) {
@@ -269,7 +279,7 @@ public class StringUtils {
      * @param offset   left edge of source String.
      * @param maxWidth maximum length of result String, must be at least 4.
      * @return abbreviated String, {@code null} if null String input.
-     * @throws IllegalArgumentException if the width is too small.
+     * @throws IllegalArgumentException Thrown if the width is too small.
      * @since 2.0
      */
     public static String abbreviate(final String str, final int offset, final int maxWidth) {
@@ -307,7 +317,7 @@ public class StringUtils {
      * @param abbrevMarker The String used as replacement marker.
      * @param maxWidth     maximum length of result String, must be at least {@code abbrevMarker.length + 1}.
      * @return abbreviated String, {@code null} if null String input.
-     * @throws IllegalArgumentException if the width is too small.
+     * @throws IllegalArgumentException Thrown if the width is too small.
      * @since 3.6
      */
     public static String abbreviate(final String str, final String abbrevMarker, final int maxWidth) {
@@ -348,7 +358,7 @@ public class StringUtils {
      * @param offset       left edge of source String.
      * @param maxWidth     maximum length of result String, must be at least 4.
      * @return abbreviated String, {@code null} if null String input.
-     * @throws IllegalArgumentException if the width is too small.
+     * @throws IllegalArgumentException Thrown if the width is too small.
      * @since 3.6
      */
     public static String abbreviate(final String str, String abbrevMarker, final int offset, final int maxWidth) {
@@ -493,7 +503,9 @@ public class StringUtils {
      * StringUtils.appendIfMissingIgnoreCase("abcxyz", "xyz") = "abcxyz"
      * StringUtils.appendIfMissingIgnoreCase("abcXYZ", "xyz") = "abcXYZ"
      * </pre>
-     * <p>With additional suffixes,</p>
+     * <p>
+     * With additional suffixes,
+     * </p>
      * <pre>
      * StringUtils.appendIfMissingIgnoreCase(null, null, null)       = null
      * StringUtils.appendIfMissingIgnoreCase("abc", null, null)      = "abc"
@@ -655,7 +667,7 @@ public class StringUtils {
      * @param size   The int size of new String, negative treated as zero.
      * @param padStr The String to pad the new String with, must not be null or empty.
      * @return centered String, {@code null} if null String input.
-     * @throws IllegalArgumentException if padStr is {@code null} or empty.
+     * @throws IllegalArgumentException Thrown if padStr is {@code null} or empty.
      */
     public static String center(String str, final int size, String padStr) {
         if (str == null || size <= 0) {
@@ -1008,7 +1020,9 @@ public class StringUtils {
      * Tests if CharSequence contains a search CharSequence, handling {@code null}.
      * This method uses {@link String#indexOf(String)} if possible.
      *
-     * <p>A {@code null} CharSequence will return {@code false}.</p>
+     * <p>
+     * A {@code null} CharSequence will return {@code false}.
+     * </p>
      *
      * <pre>
      * StringUtils.contains(null, *)     = false
@@ -1984,7 +1998,7 @@ public class StringUtils {
     }
 
     /**
-     * Calls {@link String#getBytes(Charset)} in a null-safe manner.
+     * Gets the bytes of the string using {@link String#getBytes(Charset)}, handling {@code null} safely.
      *
      * @param string input string.
      * @param charset The {@link Charset} to encode the {@link String}. If null, then use the default Charset.
@@ -1997,7 +2011,7 @@ public class StringUtils {
     }
 
     /**
-     * Calls {@link String#getBytes(String)} in a null-safe manner.
+     * Gets the bytes of the string using {@link String#getBytes(String)}, handling {@code null} safely.
      *
      * @param string input string.
      * @param charset The {@link Charset} name to encode the {@link String}. If null, then use the default Charset.
@@ -2011,7 +2025,7 @@ public class StringUtils {
     }
 
     /**
-     * Compares all Strings in an array and returns the initial sequence of characters that is common to all of them.
+     * Gets the initial sequence of characters common to all strings in the array.
      *
      * <p>
      * For example, {@code getCommonPrefix("i am a machine", "i am a robot") -&gt; "i am a "}
@@ -2063,10 +2077,10 @@ public class StringUtils {
     }
 
     /**
-     * Checks if a String {@code str} contains Unicode digits, if yes then concatenate all the digits in {@code str} and return it as a String.
+     * Gets the Unicode digits in {@code str}, concatenated in their original order.
      *
      * <p>
-     * An empty ("") String will be returned if no digits found in {@code str}.
+     * An empty ("") String will be returned if no digits are found in {@code str}.
      * </p>
      *
      * <pre>
@@ -2080,7 +2094,7 @@ public class StringUtils {
      * </pre>
      *
      * @param str The String to extract digits from, may be null.
-     * @return String with only digits, or an empty ("") String if no digits found, or {@code null} String if {@code str} is null.
+     * @return String with only digits, or an empty ("") String if no digits are found, or {@code null} String if {@code str} is null.
      * @since 3.6
      */
     public static String getDigits(final String str) {
@@ -2124,7 +2138,7 @@ public class StringUtils {
      * @param query  The query that will be matched against a term, must not be null.
      * @param locale This string matching logic is case-insensitive. A locale is necessary to normalize both Strings to lower case.
      * @return result score.
-     * @throws IllegalArgumentException if either String input {@code null} or Locale input {@code null}.
+     * @throws IllegalArgumentException Thrown if either String input {@code null} or Locale input {@code null}.
      * @since 3.4
      * @deprecated As of 3.6, use Apache Commons Text
      *             <a href="https://commons.apache.org/proper/commons-text/javadocs/api-release/org/apache/commons/text/similarity/FuzzyScore.html">
@@ -2175,7 +2189,7 @@ public class StringUtils {
     }
 
     /**
-     * Returns either the passed in CharSequence, or if the CharSequence is {@link #isBlank(CharSequence) blank} (whitespaces, empty ({@code ""}), or
+     * Gets either the passed in CharSequence, or if the CharSequence is {@link #isBlank(CharSequence) blank} (whitespaces, empty ({@code ""}), or
      * {@code null}), the value supplied by {@code defaultStrSupplier}.
      *
      * <p>
@@ -2183,7 +2197,7 @@ public class StringUtils {
      * </p>
      *
      * <p>
-     * Caller responsible for thread-safety and exception handling of default value supplier
+     * The caller is responsible for thread safety and exception handling for the default value supplier.
      * </p>
      *
      * <pre>
@@ -2210,10 +2224,10 @@ public class StringUtils {
     }
 
     /**
-     * Returns either the passed in CharSequence, or if the CharSequence is empty or {@code null}, the value supplied by {@code defaultStrSupplier}.
+     * Gets either the passed in CharSequence, or if the CharSequence is empty or {@code null}, the value supplied by {@code defaultStrSupplier}.
      *
      * <p>
-     * Caller responsible for thread-safety and exception handling of default value supplier
+     * The caller is responsible for thread safety and exception handling for the default value supplier.
      * </p>
      *
      * <pre>
@@ -2271,7 +2285,7 @@ public class StringUtils {
      * @param first  The first String, must not be null.
      * @param second The second String, must not be null.
      * @return result distance.
-     * @throws IllegalArgumentException if either String input {@code null}.
+     * @throws IllegalArgumentException Thrown if either String input {@code null}.
      * @since 3.3
      * @deprecated As of 3.6, use Apache Commons Text
      *             <a href="https://commons.apache.org/proper/commons-text/javadocs/api-release/org/apache/commons/text/similarity/JaroWinklerDistance.html">
@@ -2326,7 +2340,7 @@ public class StringUtils {
      * @param s The first String, must not be null.
      * @param t The second String, must not be null.
      * @return result distance.
-     * @throws IllegalArgumentException if either String input {@code null}.
+     * @throws IllegalArgumentException Thrown if either String input {@code null}.
      * @since 3.0 Changed signature from getLevenshteinDistance(String, String) to getLevenshteinDistance(CharSequence, CharSequence)
      * @deprecated As of 3.6, use Apache Commons Text
      *             <a href="https://commons.apache.org/proper/commons-text/javadocs/api-release/org/apache/commons/text/similarity/LevenshteinDistance.html">
@@ -2419,7 +2433,7 @@ public class StringUtils {
      * @param t         The second String, must not be null.
      * @param threshold The target threshold, must not be negative.
      * @return result distance, or {@code -1} if the distance would be greater than the threshold.
-     * @throws IllegalArgumentException if either String input {@code null} or negative threshold.
+     * @throws IllegalArgumentException Thrown if either String input {@code null} or negative threshold.
      * @deprecated As of 3.6, use Apache Commons Text
      *             <a href="https://commons.apache.org/proper/commons-text/javadocs/api-release/org/apache/commons/text/similarity/LevenshteinDistance.html">
      *             LevenshteinDistance</a> instead.
@@ -3268,8 +3282,10 @@ public class StringUtils {
     /**
      * Tests if the CharSequence contains only uppercase characters.
      *
-     * <p>{@code null} will return {@code false}.
-     * An empty String (length()=0) will return {@code false}.</p>
+     * <p>
+     * {@code null} will return {@code false}.
+     * An empty String (length()=0) will return {@code false}.
+     * </p>
      *
      * <pre>
      * StringUtils.isAllUpperCase(null)   = false
@@ -4683,11 +4699,8 @@ public class StringUtils {
      * @param endIndex   The index to stop joining from (exclusive).
      * @return The joined String, {@code null} if null array input; or the empty string if {@code endIndex - startIndex <= 0}. The number of joined entries is
      *         given by {@code endIndex - startIndex}.
-     * @throws ArrayIndexOutOfBoundsException ife<br>
-     *                                        {@code startIndex < 0} or <br>
-     *                                        {@code startIndex >= array.length()} or <br>
-     *                                        {@code endIndex < 0} or <br>
-     *                                        {@code endIndex > array.length()}
+     * @throws ArrayIndexOutOfBoundsException Thrown if<br> {@code startIndex < 0} or <br> {@code startIndex >= array.length()} or <br> {@code endIndex < 0} or
+     *         <br> {@code endIndex > array.length()}.
      */
     public static String join(final Object[] array, final String delimiter, final int startIndex, final int endIndex) {
         return array != null ? Streams.of(array).skip(startIndex).limit(Math.max(0, endIndex - startIndex))
@@ -4815,7 +4828,7 @@ public class StringUtils {
      * @param delimiter The separator character to use, null treated as "".
      * @param array     The varargs providing the values to join together. {@code null} elements are treated as "".
      * @return The joined String.
-     * @throws IllegalArgumentException if a null varargs is provided.
+     * @throws IllegalArgumentException Thrown if a null varargs is provided.
      * @since 3.5
      */
     public static String joinWith(final String delimiter, final Object... array) {
@@ -5161,7 +5174,12 @@ public class StringUtils {
         if (str.length() <= len) {
             return str;
         }
-        return str.substring(0, len);
+        int cut = len;
+        // keep the cut off the middle of a surrogate pair so the result is never left holding a lone surrogate
+        if (splitsSurrogatePair(str, cut)) {
+            cut--;
+        }
+        return str.substring(0, cut);
     }
 
     /**
@@ -5433,10 +5451,20 @@ public class StringUtils {
         if (pos < 0) {
             pos = 0;
         }
-        if (str.length() - pos <= len) {
-            return str.substring(pos);
+        int start = pos;
+        // keep the start off the middle of a surrogate pair so the result is never left holding a lone surrogate
+        if (splitsSurrogatePair(str, start)) {
+            start++;
         }
-        return str.substring(pos, pos + len);
+        if (str.length() - pos <= len) {
+            return str.substring(start);
+        }
+        int end = pos + len;
+        // keep both cuts off the middle of a surrogate pair so the result is never left holding a lone surrogate
+        if (splitsSurrogatePair(str, end)) {
+            end--;
+        }
+        return str.substring(start, Math.max(start, end));
     }
 
     /**
@@ -5633,7 +5661,7 @@ public class StringUtils {
      * @param overlay The String to overlay, may be null.
      * @param start   The position to start overlaying at.
      * @param end     The position to stop overlaying before.
-     * @return overlayed String, {@code null} if null String input.
+     * @return overlaid String, {@code null} if null String input.
      * @since 2.0
      */
     public static String overlay(final String str, String overlay, int start, int end) {
@@ -5660,6 +5688,13 @@ public class StringUtils {
             final int temp = start;
             start = end;
             end = temp;
+        }
+        // keep both cuts off the middle of a surrogate pair so the result is never left holding a lone surrogate
+        if (splitsSurrogatePair(str, start)) {
+            start--;
+        }
+        if (splitsSurrogatePair(str, end)) {
+            end++;
         }
         return str.substring(0, start) + overlay + str.substring(end);
     }
@@ -5840,7 +5875,7 @@ public class StringUtils {
      * @param text  text to remove from, may be null.
      * @param regex The regular expression to which this string is to be matched.
      * @return The text with any removes processed, {@code null} if null String input.
-     * @throws java.util.regex.PatternSyntaxException if the regular expression's syntax is invalid.
+     * @throws java.util.regex.PatternSyntaxException Thrown if the regular expression's syntax is invalid.
      * @see #replaceAll(String, String, String)
      * @see #removePattern(String, String)
      * @see String#replaceAll(String, String)
@@ -5948,7 +5983,7 @@ public class StringUtils {
      * @param text  text to remove from, may be null.
      * @param regex The regular expression to which this string is to be matched.
      * @return The text with the first replacement processed, {@code null} if null String input.
-     * @throws java.util.regex.PatternSyntaxException if the regular expression's syntax is invalid.
+     * @throws java.util.regex.PatternSyntaxException Thrown if the regular expression's syntax is invalid.
      * @see #replaceFirst(String, String, String)
      * @see String#replaceFirst(String, String)
      * @see java.util.regex.Pattern
@@ -6328,7 +6363,7 @@ public class StringUtils {
      * @param regex       The regular expression to which this string is to be matched.
      * @param replacement The string to be substituted for each match.
      * @return The text with any replacements processed, {@code null} if null String input.
-     * @throws java.util.regex.PatternSyntaxException if the regular expression's syntax is invalid.
+     * @throws java.util.regex.PatternSyntaxException Thrown if the regular expression's syntax is invalid.
      * @see #replacePattern(String, String, String)
      * @see String#replaceAll(String, String)
      * @see java.util.regex.Pattern
@@ -6459,15 +6494,15 @@ public class StringUtils {
      * @param searchList      The Strings to search for, no-op if null.
      * @param replacementList The Strings to replace them with, no-op if null.
      * @return The text with any replacements processed, {@code null} if null String input.
-     * @throws IllegalArgumentException if the lengths of the arrays are not the same (null is ok, and/or size 0).
+     * @throws IllegalArgumentException Thrown if the lengths of the arrays are not the same (null is ok, and/or size 0).
      * @since 2.4
      */
     public static String replaceEach(final String text, final String[] searchList, final String[] replacementList) {
-        return replaceEach(text, searchList, replacementList, false, 0);
+        return replaceEachOnce(text, searchList, replacementList);
     }
 
     /**
-     * Replace all occurrences of Strings within another String. This is a private recursive helper method for
+     * Replace all occurrences of Strings within another String, in a single pass. This is a private helper method for
      * {@link #replaceEachRepeatedly(String, String[], String[])} and {@link #replaceEach(String, String[], String[])}
      *
      * <p>
@@ -6475,44 +6510,35 @@ public class StringUtils {
      * </p>
      *
      * <pre>
-     *  StringUtils.replaceEach(null, *, *, *, *)                                                     = null
-     *  StringUtils.replaceEach("", *, *, *, *)                                                       = ""
-     *  StringUtils.replaceEach("aba", null, null, *, *)                                              = "aba"
-     *  StringUtils.replaceEach("aba", new String[0], null, *, *)                                     = "aba"
-     *  StringUtils.replaceEach("aba", null, new String[0], *, *)                                     = "aba"
-     *  StringUtils.replaceEach("aba", new String[]{"a"}, null, *, *)                                 = "aba"
-     *  StringUtils.replaceEach("aba", new String[]{"a"}, new String[]{""}, *, >=0)                   = "b"
-     *  StringUtils.replaceEach("aba", new String[]{null}, new String[]{"a"}, *, >=0)                 = "aba"
-     *  StringUtils.replaceEach("abcde", new String[]{"ab", "d"}, new String[]{"w", "t"}, *, >=0)     = "wcte"
-     *  (example of how it repeats)
-     *  StringUtils.replaceEach("abcde", new String[]{"ab", "d"}, new String[]{"d", "t"}, false, >=0) = "dcte"
-     *  StringUtils.replaceEach("abcde", new String[]{"ab", "d"}, new String[]{"d", "t"}, true, >=2)  = "tcte"
-     *  StringUtils.replaceEach("abcde", new String[]{"ab", "d"}, new String[]{"d", "ab"}, *, *)      = Throws {@link IllegalStateException}
+     *  StringUtils.replaceEachOnce(null, *, *)                                                = null
+     *  StringUtils.replaceEachOnce("", *, *)                                                  = ""
+     *  StringUtils.replaceEachOnce("aba", null, null)                                         = "aba"
+     *  StringUtils.replaceEachOnce("aba", new String[0], null)                                = "aba"
+     *  StringUtils.replaceEachOnce("aba", null, new String[0])                                = "aba"
+     *  StringUtils.replaceEachOnce("aba", new String[]{"a"}, null)                            = "aba"
+     *  StringUtils.replaceEachOnce("aba", new String[]{"a"}, new String[]{""})                = "b"
+     *  StringUtils.replaceEachOnce("aba", new String[]{null}, new String[]{"a"})              = "aba"
+     *  StringUtils.replaceEachOnce("abcde", new String[]{"ab", "d"}, new String[]{"w", "t"})  = "wcte"
+     *  StringUtils.replaceEachOnce("abcde", new String[]{"ab", "d"}, new String[]{"d", "t"})  = "dcte"
      * </pre>
+     *
+     * <p>
+     * When no replacement is performed, the {@code text} argument is returned unchanged (same reference); callers rely on this to detect convergence.
+     * </p>
      *
      * @param text            text to search and replace in, no-op if null.
      * @param searchList      The Strings to search for, no-op if null.
      * @param replacementList The Strings to replace them with, no-op if null.
-     * @param repeat          if true, then replace repeatedly until there are no more possible replacements or timeToLive < 0.
-     * @param timeToLive      if less than 0 then there is a circular reference and endless loop.
      * @return The text with any replacements processed, {@code null} if null String input.
-     * @throws IllegalStateException    if the search is repeating and there is an endless loop due to outputs of one being inputs to another.
-     * @throws IllegalArgumentException if the lengths of the arrays are not the same (null is ok, and/or size 0).
+     * @throws IllegalArgumentException Thrown if the lengths of the arrays are not the same (null is ok, and/or size 0).
      * @since 2.4
      */
-    private static String replaceEach(
-            final String text, final String[] searchList, final String[] replacementList, final boolean repeat, final int timeToLive) {
+    private static String replaceEachOnce(final String text, final String[] searchList, final String[] replacementList) {
 
         // Performance note: This creates very few new objects (one major goal)
         // let me know if there are performance requests, we can create a harness to measure
         if (isEmpty(text) || ArrayUtils.isEmpty(searchList) || ArrayUtils.isEmpty(replacementList)) {
             return text;
-        }
-
-        // if recursing, this shouldn't be less than 0
-        if (timeToLive < 0) {
-            throw new IllegalStateException("Aborting to protect against StackOverflowError - " +
-                "output of one loop is the input of another");
         }
 
         final int searchLength = searchList.length;
@@ -6611,12 +6637,7 @@ public class StringUtils {
         for (int i = start; i < textLength; i++) {
             buf.append(text.charAt(i));
         }
-        final String result = buf.toString();
-        if (!repeat) {
-            return result;
-        }
-
-        return replaceEach(result, searchList, replacementList, repeat, timeToLive - 1);
+        return buf.toString();
     }
 
     /**
@@ -6645,13 +6666,25 @@ public class StringUtils {
      * @param searchList      The Strings to search for, no-op if null.
      * @param replacementList The Strings to replace them with, no-op if null.
      * @return The text with any replacements processed, {@code null} if null String input.
-     * @throws IllegalStateException    if the search is repeating and there is an endless loop due to outputs of one being inputs to another.
-     * @throws IllegalArgumentException if the lengths of the arrays are not the same (null is ok, and/or size 0).
+     * @throws IllegalStateException    Thrown if the search is repeating and there is an endless loop due to outputs of one being inputs to another.
+     * @throws IllegalArgumentException Thrown if the lengths of the arrays are not the same (null is ok, and/or size 0).
      * @since 2.4
      */
     public static String replaceEachRepeatedly(final String text, final String[] searchList, final String[] replacementList) {
-        final int timeToLive = Math.max(ArrayUtils.getLength(searchList), DEFAULT_TTL);
-        return replaceEach(text, searchList, replacementList, true, timeToLive);
+        // The iteration budget is a fixed constant, deliberately independent of the caller-supplied
+        // searchList length: deriving the budget from the input would let the input size choose the
+        // recursion depth/amplification (formerly a real StackOverflowError on large search lists).
+        String result = text;
+        for (int timeToLive = DEFAULT_TTL; timeToLive >= 0; timeToLive--) {
+            final String next = replaceEachOnce(result, searchList, replacementList);
+            if (next == result) {
+                // No replacement was performed; converged.
+                return result;
+            }
+            result = next;
+        }
+        throw new IllegalStateException("Aborting to protect against StackOverflowError - " +
+            "output of one loop is the input of another");
     }
 
     /**
@@ -6692,7 +6725,7 @@ public class StringUtils {
      * @param regex       The regular expression to which this string is to be matched.
      * @param replacement The string to be substituted for the first match.
      * @return The text with the first replacement processed, {@code null} if null String input.
-     * @throws java.util.regex.PatternSyntaxException if the regular expression's syntax is invalid.
+     * @throws java.util.regex.PatternSyntaxException Thrown if the regular expression's syntax is invalid.
      * @see String#replaceFirst(String, String)
      * @see java.util.regex.Pattern
      * @see java.util.regex.Pattern#DOTALL
@@ -6955,7 +6988,12 @@ public class StringUtils {
         if (str.length() <= len) {
             return str;
         }
-        return str.substring(str.length() - len);
+        int start = str.length() - len;
+        // keep the cut off the middle of a surrogate pair so the result is never left holding a lone surrogate
+        if (splitsSurrogatePair(str, start)) {
+            start++;
+        }
+        return str.substring(start);
     }
 
     /**
@@ -8791,7 +8829,7 @@ public class StringUtils {
      * @param bytes   The byte array to read from.
      * @param charset The encoding to use, if null then use the platform default.
      * @return A new String.
-     * @throws NullPointerException if {@code bytes} is null
+     * @throws NullPointerException Thrown if {@code bytes} is null.
      * @since 3.2
      * @since 3.3 No longer throws {@link UnsupportedEncodingException}.
      */
@@ -8827,7 +8865,7 @@ public class StringUtils {
      * @param bytes       The byte array to read from.
      * @param charsetName The encoding to use, if null then use the platform default.
      * @return A new String.
-     * @throws NullPointerException if the input is null.
+     * @throws NullPointerException Thrown if the input is null.
      * @since 3.1
      * @deprecated Use {@link StringUtils#toEncodedString(byte[], Charset)} instead of String constants in your code.
      */
@@ -8973,7 +9011,7 @@ public class StringUtils {
      * @param str      The String to truncate, may be null.
      * @param maxWidth maximum length of result String, must be non-negative.
      * @return truncated String, {@code null} if null String input.
-     * @throws IllegalArgumentException If {@code maxWidth} is less than {@code 0}.
+     * @throws IllegalArgumentException Thrown if {@code maxWidth} is less than {@code 0}.
      * @since 3.5
      */
     public static String truncate(final String str, final int maxWidth) {
@@ -9035,7 +9073,7 @@ public class StringUtils {
      * @param offset   left edge of source String.
      * @param maxWidth maximum length of result String, must be non-negative.
      * @return truncated String, {@code null} if null String input.
-     * @throws IllegalArgumentException If {@code offset} or {@code maxWidth} is less than {@code 0}.
+     * @throws IllegalArgumentException Thrown if {@code offset} or {@code maxWidth} is less than {@code 0}.
      * @since 3.5
      */
     public static String truncate(final String str, final int offset, final int maxWidth) {

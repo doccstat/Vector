@@ -27,9 +27,11 @@ import org.apache.commons.lang3.Validate;
 /**
  * Provides utilities for working with the {@link Formattable} interface.
  *
- * <p>The {@link Formattable} interface provides basic control over formatting
+ * <p>
+ * The {@link Formattable} interface provides basic control over formatting
  * when using a {@link Formatter}. It is primarily concerned with numeric precision
- * and padding, and is not designed to allow generalized alternate formats.</p>
+ * and padding, and is not designed to allow generalized alternate formats.
+ * </p>
  *
  * @since 3.0
  * @deprecated As of <a href="https://commons.apache.org/proper/commons-lang/changes-report.html#a3.6">3.6</a>, use Apache Commons Text
@@ -101,8 +103,9 @@ public class FormattableUtils {
             buf.replace(precision - actualEllipsis.length(), seq.length(), actualEllipsis.toString());
         }
         final boolean leftJustify = (flags & FormattableFlags.LEFT_JUSTIFY) == FormattableFlags.LEFT_JUSTIFY;
-        for (int i = buf.length(); i < width; i++) {
-            buf.insert(leftJustify ? i : 0, padChar);
+        if (width > buf.length()) {
+            final String padding = StringUtils.repeat(padChar, width - buf.length());
+            buf.insert(leftJustify ? buf.length() : 0, padding);
         }
         return formatter.format(SIMPLEST_FORMAT, buf.toString());
     }
@@ -141,8 +144,10 @@ public class FormattableUtils {
      * standard programming. Instead, the methods of the class should be invoked
      * statically.
      *
-     * <p>This constructor is public to permit tools that require a JavaBean
-     * instance to operate.</p>
+     * <p>
+     * This constructor is public to permit tools that require a JavaBean
+     * instance to operate.
+     * </p>
      */
     public FormattableUtils() {
     }

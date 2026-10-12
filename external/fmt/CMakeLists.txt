@@ -78,13 +78,19 @@ if (CMAKE_VERSION VERSION_GREATER_EQUAL 3.28 AND CMAKE_CXX_STANDARD
   endif ()
 endif ()
 
+set(FMT_USE_MODULES ${FMT_USE_CMAKE_MODULES})
+if (CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang" AND CMAKE_CXX_COMPILER_VERSION
+                                                    VERSION_GREATER_EQUAL 21)
+  set(FMT_USE_MODULES ON)
+endif ()
+
 option(FMT_DOC "Generate the doc target." ${FMT_MASTER_PROJECT})
 option(FMT_INSTALL "Generate the install target." ${FMT_MASTER_PROJECT})
 option(FMT_TEST "Generate the test target." ${FMT_MASTER_PROJECT})
 option(FMT_FUZZ "Generate the fuzz target." OFF)
 option(FMT_CUDA_TEST "Generate the cuda-test target." OFF)
 option(FMT_OS "Include OS-specific APIs." ON)
-option(FMT_MODULE "Build a module library." ${FMT_USE_CMAKE_MODULES})
+option(FMT_MODULE "Build a module library." ${FMT_USE_MODULES})
 option(FMT_SYSTEM_HEADERS "Expose headers with marking them as system." OFF)
 option(FMT_UNICODE "Enable Unicode support." ON)
 option(FMT_PEDANTIC "Enable extra warnings and expensive tests." OFF)
@@ -107,10 +113,10 @@ set(FMT_DEBUG_POSTFIX
     d
     CACHE STRING "Debug library postfix.")
 
-# Get version from base.h.
-file(READ include/fmt/base.h base_h)
-if (NOT base_h MATCHES "FMT_VERSION ([0-9]+)([0-9][0-9])([0-9][0-9])")
-  message(FATAL_ERROR "Cannot get FMT_VERSION from base.h.")
+# Get version from core.h.
+file(READ include/fmt/core.h core_h)
+if (NOT core_h MATCHES "FMT_VERSION ([0-9]+)([0-9][0-9])([0-9][0-9])")
+  message(FATAL_ERROR "Cannot get FMT_VERSION from core.h.")
 endif ()
 # Use math to skip leading zeros if any.
 math(EXPR CPACK_PACKAGE_VERSION_MAJOR ${CMAKE_MATCH_1})
@@ -275,6 +281,7 @@ foreach (
   color.h
   compile.h
   core.h
+  enum.h
   format.h
   format-inl.h
   os.h
@@ -364,18 +371,46 @@ function (add_module_library name)
     target_compile_options(${name} PUBLIC -fmodules-ts)
   endif ()
 
-  # `std` is affected by CMake options and may be higher than C++20.
+  set(module_compile_options)
+  if (CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang")
+    # AppleClang requires explicit module and SDK flags when precompiling.
+    execute_process(
+      COMMAND xcrun --sdk "${CMAKE_OSX_SYSROOT}" --show-sdk-path
+      RESULT_VARIABLE module_sdk_result
+      OUTPUT_VARIABLE module_sysroot
+      ERROR_VARIABLE module_sdk_error
+      OUTPUT_STRIP_TRAILING_WHITESPACE)
+    if (NOT module_sdk_result EQUAL 0 OR NOT module_sysroot)
+      message(FATAL_ERROR "Failed to find Apple SDK: ${module_sdk_error}")
+    endif ()
+    set(module_compile_options -fcxx-modules -isysroot "${module_sysroot}")
+    target_compile_options(${name} PUBLIC ${module_compile_options})
+  endif ()
+
+  # The standard and extension mode are affected by CMake options.
   get_target_property(std ${name} CXX_STANDARD)
+  if (NOT std OR std LESS 20)
+    set(std 20)
+  endif ()
+  get_target_property(extensions ${name} CXX_EXTENSIONS)
+  if (extensions STREQUAL "extensions-NOTFOUND")
+    set(extensions ON)
+  endif ()
+  set(std_prefix c++)
+  if (extensions)
+    set(std_prefix gnu++)
+  endif ()
 
   if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     set(pcms)
     foreach (src ${sources})
-      get_filename_component(pcm ${src} NAME_WE)
-      set(pcm ${pcm}.pcm)
+      get_filename_component(module_name ${src} NAME_WE)
+      set(pcm ${module_name}.pcm)
 
-      # Propagate -fmodule-file=*.pcm to targets that link with this library.
+      # Propagate the module BMI to targets that link with this library.
       target_compile_options(
-        ${name} PUBLIC -fmodule-file=${CMAKE_CURRENT_BINARY_DIR}/${pcm})
+        ${name}
+        PUBLIC -fmodule-file=${module_name}=${CMAKE_CURRENT_BINARY_DIR}/${pcm})
 
       # Use an absolute path to prevent target_link_libraries prepending -l
       # to it.
@@ -383,8 +418,9 @@ function (add_module_library name)
       add_custom_command(
         OUTPUT ${pcm}
         COMMAND
-          ${CMAKE_CXX_COMPILER} -std=c++${std} -x c++-module --precompile -c -o
-          ${pcm} ${CMAKE_CURRENT_SOURCE_DIR}/${src}
+          ${CMAKE_CXX_COMPILER} ${module_compile_options}
+          -std=${std_prefix}${std} -x c++-module --precompile -o ${pcm}
+          ${CMAKE_CURRENT_SOURCE_DIR}/${src}
           "-I$<JOIN:$<TARGET_PROPERTY:${name},INCLUDE_DIRECTORIES>,;-I>"
         # Required by the -I generator expression above.
         COMMAND_EXPAND_LISTS
@@ -402,6 +438,7 @@ function (add_module_library name)
         OUTPUT ${obj}
         COMMAND ${CMAKE_CXX_COMPILER} $<TARGET_PROPERTY:${name},COMPILE_OPTIONS>
                 -c -o ${obj} ${pcm}
+        COMMAND_EXPAND_LISTS
         DEPENDS ${pcm})
     endforeach ()
   endif ()
@@ -422,6 +459,14 @@ setup_target(fmt-header-only INTERFACE)
 
 add_library(fmt-c src/fmt-c.cc)
 target_compile_features(fmt-c INTERFACE c_std_11)
+
+# Set FMT_C_LIB_NAME for pkg-config fmt-c.pc. We cannot use the OUTPUT_NAME
+# target property because it's not set by default.
+set(FMT_C_LIB_NAME fmt-c)
+if (CMAKE_BUILD_TYPE STREQUAL "Debug")
+  set(FMT_C_LIB_NAME ${FMT_C_LIB_NAME}${FMT_DEBUG_POSTFIX})
+endif ()
+
 if (BUILD_SHARED_LIBS)
   target_compile_definitions(
     fmt-c
@@ -462,6 +507,7 @@ if (FMT_INSTALL)
   set(version_config ${PROJECT_BINARY_DIR}/fmt-config-version.cmake)
   set(project_config ${PROJECT_BINARY_DIR}/fmt-config.cmake)
   set(pkgconfig ${PROJECT_BINARY_DIR}/fmt.pc)
+  set(pkgconfig_c ${PROJECT_BINARY_DIR}/fmt-c.pc)
 
   set_verbose(
     FMT_LIB_DIR ${CMAKE_INSTALL_LIBDIR} CACHE STRING
@@ -488,6 +534,8 @@ if (FMT_INSTALL)
 
   configure_file("${PROJECT_SOURCE_DIR}/support/cmake/fmt.pc.in" "${pkgconfig}"
                  @ONLY)
+  configure_file("${PROJECT_SOURCE_DIR}/support/cmake/fmt-c.pc.in"
+                 "${pkgconfig_c}" @ONLY)
   configure_package_config_file(
     ${PROJECT_SOURCE_DIR}/support/cmake/fmt-config.cmake.in ${project_config}
     INSTALL_DESTINATION ${FMT_CMAKE_DIR})
@@ -517,7 +565,7 @@ if (FMT_INSTALL)
     COMPONENT fmt_core)
 
   install(
-    FILES "${pkgconfig}"
+    FILES "${pkgconfig}" "${pkgconfig_c}"
     DESTINATION "${FMT_PKGCONFIG_DIR}"
     COMPONENT fmt_core)
 endif ()

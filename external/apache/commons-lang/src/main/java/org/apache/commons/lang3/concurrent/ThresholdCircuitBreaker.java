@@ -46,7 +46,9 @@ import java.util.concurrent.atomic.AtomicLong;
  * }
  * </pre>
  *
- * <p>#Thread safe#</p>
+ * <p>
+ * #Thread safe#
+ * </p>
  *
  * @since 3.5
  */
@@ -88,7 +90,9 @@ public class ThresholdCircuitBreaker extends AbstractCircuitBreaker<Long> {
     /**
      * {@inheritDoc}
      *
-     * <p>Resets the internal counter back to its initial value (zero).</p>
+     * <p>
+     * Resets the internal counter back to its initial value (zero).
+     * </p>
      */
     @Override
     public void close() {
@@ -108,19 +112,35 @@ public class ThresholdCircuitBreaker extends AbstractCircuitBreaker<Long> {
     /**
      * {@inheritDoc}
      *
-     * <p>If the threshold is zero, the circuit breaker will be in a permanent <em>open</em> state.</p>
+     * <p>
+     * If the threshold is zero, the circuit breaker will be in a permanent <em>open</em> state.
+     * </p>
+     * <p>
+     * The internal counter is a protective counter and only moves toward the threshold: negative
+     * increments are rejected, and an increment that would overflow {@link Long#MAX_VALUE} saturates
+     * the counter at {@link Long#MAX_VALUE} and opens the circuit breaker instead of silently wrapping
+     * negative (which would disable the trip condition).
+     * </p>
+     *
+     * @throws IllegalArgumentException Thrown if the increment is negative.
      */
     @Override
     public boolean incrementAndCheckState(final Long increment) {
         if (threshold == 0) {
             open();
         }
-
-        final long used = this.used.addAndGet(increment);
-        if (used > threshold) {
+        final long delta = increment.longValue();
+        if (delta < 0) {
+            throw new IllegalArgumentException("Increment must not be negative: " + delta);
+        }
+        final long used = this.used.accumulateAndGet(delta, (current, add) -> {
+            final long next = current + add;
+            // Both operands are non-negative, so overflow shows up as a decrease: saturate.
+            return next < current ? Long.MAX_VALUE : next;
+        });
+        if (used > threshold || used == Long.MAX_VALUE) {
             open();
         }
-
         return checkState();
     }
 
