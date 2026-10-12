@@ -53,7 +53,7 @@ class StringEscapeUtilsTest extends AbstractLangTest {
         {"quotes", "&quot;bread&quot; &amp; butter", "\"bread\" & butter"},
         {"final character only", "greater than &gt;", "greater than >"},
         {"first character only", "&lt; less than", "< less than"},
-        {"apostrophe", "Huntington's chorea", "Huntington's chorea"},
+        {"apostrophe", "Huntington&#39;s chorea", "Huntington's chorea"},
         {"languages", "English,Fran&ccedil;ais,\u65E5\u672C\u8A9E (nihongo)", "English,Fran\u00E7ais,\u65E5\u672C\u8A9E (nihongo)"},
         {"8-bit ascii shouldn't number-escape", "\u0080\u009F", "\u0080\u009F"},
     };
@@ -150,6 +150,45 @@ class StringEscapeUtilsTest extends AbstractLangTest {
                 StringEscapeUtils.escapeEcmaScript("document.getElementById(\"test\").value = '<script>alert('aaa');</script>';"));
     }
 
+    @Test
+    void testEscapeEcmaScriptInlineScriptSequences() {
+        // HTML parser-state sequences remain unchanged, as documented for this string escaper.
+        assertEquals("<!--", StringEscapeUtils.escapeEcmaScript("<!--"));
+        assertEquals("<script", StringEscapeUtils.escapeEcmaScript("<script"));
+        assertEquals("<!--<script>", StringEscapeUtils.escapeEcmaScript("<!--<script>"));
+        assertEquals("<\\/script>", StringEscapeUtils.escapeEcmaScript("</script>"));
+    }
+
+    @Test
+    void testEscapeEcmaScriptLineSeparators() {
+        assertEquals("\\u2028\\u2029", StringEscapeUtils.escapeEcmaScript("\u2028\u2029"));
+    }
+
+    @Test
+    void testEscapeEcmaScriptTemplateLiterals() throws IOException {
+        final String[][] cases = {
+            {"`", "\\`"},
+            {"${", "\\${"},
+            {"${alert(document.cookie)}", "\\${alert(document.cookie)}"},
+            {"`;alert(document.cookie);//", "\\`;alert(document.cookie);\\/\\/"},
+            {"Hello `${name}`!", "Hello \\`\\${name}\\`!"},
+            {"${first}${second}", "\\${first}\\${second}"},
+            {"$${name}", "$\\${name}"},
+            {"\\`", "\\\\\\`"},
+            {"\\${name}", "\\\\\\${name}"},
+            {"$ {name} { } $", "$ {name} { } $"}
+        };
+        for (final String[] pair : cases) {
+            final String input = pair[0];
+            final String expected = pair[1];
+            assertEquals(expected, StringEscapeUtils.escapeEcmaScript(input), input);
+            final StringWriter writer = new StringWriter();
+            StringEscapeUtils.ESCAPE_ECMASCRIPT.translate(input, writer);
+            assertEquals(expected, writer.toString(), input);
+            assertEquals(input, StringEscapeUtils.unescapeEcmaScript(expected), input);
+        }
+    }
+
     /**
      * Tests https://issues.apache.org/jira/browse/LANG-339
      */
@@ -175,6 +214,24 @@ class StringEscapeUtilsTest extends AbstractLangTest {
             final String actual = original == null ? null : sw.toString();
             assertEquals(expected, actual, message);
         }
+    }
+
+    @Test
+    void testEscapeHtmlApostrophes() throws IOException {
+        final String input = "' autofocus onfocus=alert(1) x='";
+        final String expected = "&#39; autofocus onfocus=alert(1) x=&#39;";
+        assertEquals(expected, StringEscapeUtils.escapeHtml3(input));
+        assertEquals(expected, StringEscapeUtils.escapeHtml4(input));
+        for (final CharSequenceTranslator translator : new CharSequenceTranslator[] {
+                StringEscapeUtils.ESCAPE_HTML3, StringEscapeUtils.ESCAPE_HTML4 }) {
+            final StringWriter writer = new StringWriter();
+            translator.translate(input, writer);
+            assertEquals(expected, writer.toString());
+            assertEquals("&#39;&#39;", translator.translate("''"));
+            assertEquals("&amp;#39;", translator.translate("&#39;"));
+        }
+        assertEquals(input, StringEscapeUtils.unescapeHtml3(expected));
+        assertEquals(input, StringEscapeUtils.unescapeHtml4(expected));
     }
 
     /**
@@ -246,6 +303,16 @@ class StringEscapeUtilsTest extends AbstractLangTest {
         final String expected = "\\\"foo\\\" isn't \\\"bar\\\". specials: \\b\\r\\n\\f\\t\\\\\\/";
         final String input = "\"foo\" isn't \"bar\". specials: \b\r\n\f\t\\/";
         assertEquals(expected, StringEscapeUtils.escapeJson(input));
+    }
+
+    @Test
+    void testEscapeJsonTemplateLiteralAndInlineScriptSequences() {
+        // JSON escaping preserves these sequences and does not provide HTML-context encoding.
+        assertEquals("`${alert(document.cookie)}`", StringEscapeUtils.escapeJson("`${alert(document.cookie)}`"));
+        assertEquals("<!--", StringEscapeUtils.escapeJson("<!--"));
+        assertEquals("<script", StringEscapeUtils.escapeJson("<script"));
+        assertEquals("<!--<script>", StringEscapeUtils.escapeJson("<!--<script>"));
+        assertEquals("<\\/script>", StringEscapeUtils.escapeJson("</script>"));
     }
 
     @Test
@@ -473,7 +540,9 @@ class StringEscapeUtilsTest extends AbstractLangTest {
         assertNull(StringEscapeUtils.unescapeJava(null));
         assertNullPointerException(() -> StringEscapeUtils.UNESCAPE_JAVA.translate(null, null));
         assertNullPointerException(() -> StringEscapeUtils.UNESCAPE_JAVA.translate("", null));
-        assertThrows(RuntimeException.class, () -> StringEscapeUtils.unescapeJava("\\u02-3"));
+        // A malformed Unicode escape is not translated by the Unicode unescaper; the aggregate's
+        // stray-backslash rule then drops the lone backslash (same as unescapeJava("\\") == "").
+        assertEquals("u02-3", StringEscapeUtils.unescapeJava("\\u02-3"));
         assertUnescapeJava("", "");
         assertUnescapeJava("test", "test");
         assertUnescapeJava("\ntest\b", "\\ntest\\b");

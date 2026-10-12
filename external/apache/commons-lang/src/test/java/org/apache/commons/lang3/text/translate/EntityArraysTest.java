@@ -17,6 +17,7 @@
 
 package org.apache.commons.lang3.text.translate;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.HashSet;
@@ -30,6 +31,12 @@ import org.junit.jupiter.api.Test;
  */
 @Deprecated
 class EntityArraysTest extends AbstractLangTest {
+
+    @Test
+    void testBasicApostrophe() {
+        assertEquals("&#39;", new LookupTranslator(EntityArrays.BASIC_ESCAPE()).translate("'"));
+        assertEquals("'", new LookupTranslator(EntityArrays.BASIC_UNESCAPE()).translate("&#39;"));
+    }
 
     @Test
     void testConstructorExists() {

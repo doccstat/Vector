@@ -87,7 +87,8 @@ final class CachedRandomBits {
     /**
      * Generates a random integer with the specified number of bits.
      *
-     * <p>This method efficiently generates random bits by using a byte cache and bit manipulation:
+     * <p>
+     * This method efficiently generates random bits by using a byte cache and bit manipulation:
      * <ul>
      *   <li>Uses a byte array cache to avoid frequent calls to the underlying random number generator</li>
      *   <li>Extracts bits from each byte using bit shifting and masking</li>
@@ -98,7 +99,7 @@ final class CachedRandomBits {
      *
      * @param bits number of bits to generate, MUST be between 1 and 32 (inclusive)
      * @return random integer containing exactly the requested number of random bits
-     * @throws IllegalArgumentException if bits is not between 1 and 32
+     * @throws IllegalArgumentException Thrown if bits is not between 1 and 32.
      */
     public int nextBits(final int bits) {
         if (bits > MAX_BITS || bits <= 0) {

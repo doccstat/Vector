@@ -19,6 +19,7 @@ package org.apache.commons.lang3;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.Test;
@@ -68,8 +69,9 @@ class BitFieldLongTest extends AbstractLangTest {
         assertEquals(BF_MULTI.clear(-1), 0xFFFF_C07F);
         assertEquals(BF_SINGLE.clear(-1), 0xFFFF_BFFF);
         assertEquals(BF_ZERO.clear(-1), 0xFFFF_FFFF);
-        assertEquals(BF_MULTI_L.clear(-1), 0xFFFF_FFFF);
-        assertEquals(BF_SINGLE_L.clear(-1), 0xFFFF_FFFF);
+        // Above-bit-31 masks fail loudly on int holders instead of silently no-op'ing (see BitField#intMask()).
+        assertThrows(IllegalStateException.class, () -> BF_MULTI_L.clear(-1));
+        assertThrows(IllegalStateException.class, () -> BF_SINGLE_L.clear(-1));
         assertEquals(BF_ZERO_L.clear(-1), 0xFFFF_FFFF);
     }
 
@@ -94,8 +96,9 @@ class BitFieldLongTest extends AbstractLangTest {
         assertEquals(BF_MULTI.clearShort((short) - 1), (short) 0xC07F);
         assertEquals(BF_SINGLE.clearShort((short) - 1), (short) 0xBFFF);
         assertEquals(BF_ZERO.clearShort((short) -1), (short) 0xFFFF);
-        assertEquals(BF_MULTI_L.clearShort((short) - 1), (short) 0xFFFF);
-        assertEquals(BF_SINGLE_L.clearShort((short) - 1), (short) 0xFFFF);
+        // Above-bit-31 masks fail loudly on short holders instead of silently no-op'ing (see BitField#intMask()).
+        assertThrows(IllegalStateException.class, () -> BF_MULTI_L.clearShort((short) -1));
+        assertThrows(IllegalStateException.class, () -> BF_SINGLE_L.clearShort((short) -1));
         assertEquals(BF_ZERO_L.clearShort((short) -1), (short) 0xFFFF);
     }
 
@@ -121,11 +124,12 @@ class BitFieldLongTest extends AbstractLangTest {
         assertEquals(BF_SINGLE.getRawValue(0), 0);
         assertEquals(BF_ZERO.getRawValue(-1), 0);
         assertEquals(BF_ZERO.getRawValue(0), 0);
-        // mask > max int and int input
-        assertEquals(BF_MULTI_L.getRawValue(-1), 0);
-        assertEquals(BF_MULTI_L.getRawValue(0), 0);
-        assertEquals(BF_SINGLE_L.getRawValue(-1), 0);
-        assertEquals(BF_SINGLE_L.getRawValue(0), 0);
+        // mask > max int and int input: fails loudly (the old silent 0 was incoherent with the
+        // sign-extended answers the same mixture produced in isSet/isAllSet).
+        assertThrows(IllegalStateException.class, () -> BF_MULTI_L.getRawValue(-1));
+        assertThrows(IllegalStateException.class, () -> BF_MULTI_L.getRawValue(0));
+        assertThrows(IllegalStateException.class, () -> BF_SINGLE_L.getRawValue(-1));
+        assertThrows(IllegalStateException.class, () -> BF_SINGLE_L.getRawValue(0));
         assertEquals(BF_ZERO_L.getRawValue(-1), 0);
         assertEquals(BF_ZERO_L.getRawValue(0), 0);
         // mask > max int and long input
@@ -149,11 +153,11 @@ class BitFieldLongTest extends AbstractLangTest {
         assertEquals(BF_SINGLE.getShortRawValue((short) 0), (short) 0);
         assertEquals(BF_ZERO.getShortRawValue((short) -1), (short) 0);
         assertEquals(BF_ZERO.getShortRawValue((short) 0), (short) 0);
-        // mask > max int and short input
-        assertEquals(BF_MULTI_L.getShortRawValue((short) - 1), (short) 0);
-        assertEquals(BF_MULTI_L.getShortRawValue((short) 0), (short) 0);
-        assertEquals(BF_SINGLE_L.getShortRawValue((short) - 1), (short) 0);
-        assertEquals(BF_SINGLE_L.getShortRawValue((short) 0), (short) 0);
+        // mask > max int and short input: fails loudly (see testGetRawValue).
+        assertThrows(IllegalStateException.class, () -> BF_MULTI_L.getShortRawValue((short) -1));
+        assertThrows(IllegalStateException.class, () -> BF_MULTI_L.getShortRawValue((short) 0));
+        assertThrows(IllegalStateException.class, () -> BF_SINGLE_L.getShortRawValue((short) -1));
+        assertThrows(IllegalStateException.class, () -> BF_SINGLE_L.getShortRawValue((short) 0));
         assertEquals(BF_ZERO_L.getShortRawValue((short) -1), (short) 0);
         assertEquals(BF_ZERO_L.getShortRawValue((short) 0), (short) 0);
     }

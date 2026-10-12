@@ -45,6 +45,21 @@ final class ImmutableTimeZone extends TimeZone {
      * {@inheritDoc}
      */
     @Override
+    public boolean equals(final Object obj) {
+        if (this == obj) {
+            return true;
+        }
+        if (!(obj instanceof TimeZone)) {
+            return false;
+        }
+        final TimeZone other = (TimeZone) obj;
+        return timeZone.equals(other instanceof ImmutableTimeZone ? ((ImmutableTimeZone) other).timeZone : other);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
     public String getDisplayName(final boolean daylight, final int style, final Locale locale) {
         return timeZone.getDisplayName(daylight, style, locale);
     }
@@ -93,6 +108,14 @@ final class ImmutableTimeZone extends TimeZone {
      * {@inheritDoc}
      */
     @Override
+    public int hashCode() {
+        return timeZone.hashCode();
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
     public boolean hasSameRules(final TimeZone other) {
         return timeZone.hasSameRules(other);
     }
@@ -114,7 +137,7 @@ final class ImmutableTimeZone extends TimeZone {
     }
 
     /**
-     * Always throws {@link UnsupportedOperationException}.
+     * Sets no time zone property and always throws {@link UnsupportedOperationException}.
      */
     @Override
     public void setID(final String ID) {
@@ -122,7 +145,7 @@ final class ImmutableTimeZone extends TimeZone {
     }
 
     /**
-     * Always throws {@link UnsupportedOperationException}.
+     * Sets no time zone property and always throws {@link UnsupportedOperationException}.
      */
     @Override
     public void setRawOffset(final int offsetMillis) {

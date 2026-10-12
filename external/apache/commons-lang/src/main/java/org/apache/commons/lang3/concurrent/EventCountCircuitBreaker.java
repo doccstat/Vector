@@ -305,7 +305,7 @@ public class EventCountCircuitBreaker extends AbstractCircuitBreaker<Integer> {
      *
      * @param state The state
      * @return The corresponding {@link AbstractStateStrategy}
-     * @throws CircuitBreakingException if the strategy cannot be resolved
+     * @throws CircuitBreakingException Thrown if the strategy cannot be resolved.
      */
     private static AbstractStateStrategy stateStrategy(final State state) {
         return STRATEGY_MAP.get(state);
@@ -478,9 +478,19 @@ public class EventCountCircuitBreaker extends AbstractCircuitBreaker<Integer> {
 
     /**
      * {@inheritDoc}
+     *
+     * <p>
+     * The event count is a protective counter and only moves toward the opening threshold:
+     * negative increments are rejected.
+     * </p>
+     *
+     * @throws IllegalArgumentException Thrown if the increment is negative.
      */
     @Override
     public boolean incrementAndCheckState(final Integer increment) {
+        if (increment.intValue() < 0) {
+            throw new IllegalArgumentException("Increment must not be negative: " + increment);
+        }
         return performStateCheck(increment);
     }
 

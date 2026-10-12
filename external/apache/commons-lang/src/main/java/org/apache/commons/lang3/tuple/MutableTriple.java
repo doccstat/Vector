@@ -21,7 +21,9 @@ import java.util.Objects;
 /**
  * A mutable triple consisting of three {@link Object} elements.
  *
- * <p>Not #ThreadSafe#</p>
+ * <p>
+ * Not #ThreadSafe#
+ * </p>
  *
  * @param <L> The left element type.
  * @param <M> The middle element type.
@@ -82,7 +84,7 @@ public class MutableTriple<L, M, R> extends Triple<L, M, R> {
      * @param middle  The middle element, may not be null.
      * @param right  The right element, may not be null.
      * @return A mutable triple formed from the three parameters, not null.
-     * @throws NullPointerException if any input is null.
+     * @throws NullPointerException Thrown if any input is null.
      * @since 3.13.0
      */
     public static <L, M, R> MutableTriple<L, M, R> ofNonNull(final L left, final M middle, final R right) {

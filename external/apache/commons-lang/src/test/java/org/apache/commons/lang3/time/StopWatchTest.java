@@ -87,7 +87,7 @@ class StopWatchTest extends AbstractLangTest {
      * Sleeps the requested duration plus one millisecond. On Java 8, sleeping for 2 or 20 millis can sleep for a tiny bit less.
      *
      * @param duration How long to sleep.
-     * @throws InterruptedException if any thread has interrupted the current thread.
+     * @throws InterruptedException Thrown if any thread has interrupted the current thread.
      */
     private void sleepPlus1(final Duration duration) throws InterruptedException {
         ThreadUtils.sleep(duration.plusMillis(1));
@@ -145,6 +145,17 @@ class StopWatchTest extends AbstractLangTest {
         final String formatSplitTime = watch.formatSplitTime();
         assertNotEquals(ZERO_TIME_ELAPSED, formatSplitTime);
         assertTrue(formatSplitTime.startsWith(ZERO_HOURS_PREFIX), "formatSplitTime");
+    }
+
+    @Test
+    void testFormatSplitTimeExceedingIntMillis() throws Exception {
+        final StopWatch watch = StopWatch.createStarted();
+        // Backdate the start so the split spans more than Integer.MAX_VALUE milliseconds (about 24.86 days).
+        FieldUtils.writeField(watch, "startTimeNanos", System.nanoTime() - TimeUnit.DAYS.toNanos(30), true);
+        watch.split();
+        final long splitMillis = watch.getSplitDuration().toMillis();
+        assertTrue(splitMillis > Integer.MAX_VALUE, "precondition: split must exceed Integer.MAX_VALUE millis");
+        assertEquals(DurationFormatUtils.formatDurationHMS(splitMillis), watch.formatSplitTime(), "formatSplitTime");
     }
 
     @Test

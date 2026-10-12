@@ -24,8 +24,8 @@ import java.nio.file.Paths;
  * Helpers for {@link System}.
  *
  * <p>
- * If a system property cannot be read due to security restrictions, the corresponding field in this class will be set to {@code null} and a message will be
- * written to {@code System.err}.
+ * If a system property cannot be read due to security restrictions, the corresponding field in this class will be set to {@code null}; the
+ * {@link SecurityException} is swallowed silently, so a denied read is indistinguishable from an absent property.
  * </p>
  * <p>
  * #ThreadSafe#
@@ -1190,6 +1190,22 @@ public class SystemUtils {
      */
     public static final boolean IS_JAVA_27 = getJavaVersionMatches("27");
 
+    /**
+     * The constant {@code true} if this is Java version 28 (also 28.x versions).
+     * <p>
+     * The result depends on the value of the {@link #JAVA_SPECIFICATION_VERSION} constant.
+     * </p>
+     * <p>
+     * The field will return {@code false} if {@link #JAVA_SPECIFICATION_VERSION} is {@code null}.
+     * </p>
+     * <p>
+     * This value is initialized when the class is loaded.
+     * </p>
+     *
+     * @since 3.21.0
+     */
+    public static final boolean IS_JAVA_28 = getJavaVersionMatches("28");
+
     // Operating system checks
     // -----------------------------------------------------------------------
     // These MUST be declared after those above as they depend on the
@@ -2117,7 +2133,8 @@ public class SystemUtils {
      * Gets an environment variable, defaulting to {@code defaultValue} if the variable cannot be read.
      *
      * <p>
-     * If a {@link SecurityException} is caught, the return value is {@code defaultValue} and a message is written to {@code System.err}.
+     * If a {@link SecurityException} is caught, the return value is {@code defaultValue}; the exception is swallowed silently, so a denied read is
+     * indistinguishable from an unset variable.
      * </p>
      *
      * @param name         The environment variable name.
@@ -2130,8 +2147,8 @@ public class SystemUtils {
             final String value = System.getenv(name);
             return value == null ? defaultValue : value;
         } catch (final SecurityException ex) {
-            // we are not allowed to look at this property
-            // System.err.println("Caught a SecurityException reading the environment variable '" + name + "'.");
+            // We are not allowed to look at this environment variable; fall through to the default silently
+            // (the SecurityManager that raises this is terminally deprecated as of Java 17 / JEP 411).
             return defaultValue;
         }
     }
@@ -2154,7 +2171,8 @@ public class SystemUtils {
      * Gets the current Java home directory as a {@link File}.
      *
      * @return A directory.
-     * @throws SecurityException if a security manager exists and its {@code checkPropertyAccess} method doesn't allow access to the specified system property.
+     * @throws SecurityException Thrown if a security manager exists and its {@code checkPropertyAccess} method doesn't allow access to the specified system
+     *         property.
      * @see SystemProperties#getJavaHome()
      * @since 2.1
      */
@@ -2166,7 +2184,8 @@ public class SystemUtils {
      * Gets the current Java home directory as a {@link File}.
      *
      * @return A directory.
-     * @throws SecurityException if a security manager exists and its {@code checkPropertyAccess} method doesn't allow access to the specified system property.
+     * @throws SecurityException Thrown if a security manager exists and its {@code checkPropertyAccess} method doesn't allow access to the specified system
+     *         property.
      * @see SystemProperties#getJavaHome()
      * @since 3.18.0
      */
@@ -2178,7 +2197,8 @@ public class SystemUtils {
      * Gets the current Java IO temporary directory as a {@link File}.
      *
      * @return A directory.
-     * @throws SecurityException if a security manager exists and its {@code checkPropertyAccess} method doesn't allow access to the specified system property.
+     * @throws SecurityException Thrown if a security manager exists and its {@code checkPropertyAccess} method doesn't allow access to the specified system
+     *         property.
      * @see SystemProperties#getJavaIoTmpdir()
      * @since 2.1
      */
@@ -2190,7 +2210,8 @@ public class SystemUtils {
      * Gets the current Java IO temporary directory as a {@link Path}.
      *
      * @return A directory.
-     * @throws SecurityException if a security manager exists and its {@code checkPropertyAccess} method doesn't allow access to the specified system property.
+     * @throws SecurityException Thrown if a security manager exists and its {@code checkPropertyAccess} method doesn't allow access to the specified system
+     *         property.
      * @see SystemProperties#getJavaIoTmpdir()
      * @since 3.18.0
      */
@@ -2199,7 +2220,7 @@ public class SystemUtils {
     }
 
     /**
-     * Tests if the Java version matches the version we are running.
+     * Gets whether the Java version matches the version we are running.
      * <p>
      * The result depends on the value of the {@link #JAVA_SPECIFICATION_VERSION} constant.
      * </p>
@@ -2212,7 +2233,7 @@ public class SystemUtils {
     }
 
     /**
-     * Tests if the operating system matches the given name prefix and version prefix.
+     * Gets whether the operating system matches the given name and version prefixes.
      * <p>
      * The result depends on the value of the {@link #OS_NAME} and {@link #OS_VERSION} constants.
      * </p>
@@ -2229,7 +2250,7 @@ public class SystemUtils {
     }
 
     /**
-     * Tests if the operating system matches the given string with a case-insensitive comparison.
+     * Gets whether the operating system matches the given string, ignoring case.
      * <p>
      * The result depends on the value of the {@link #OS_NAME} constant.
      * </p>
@@ -2251,7 +2272,8 @@ public class SystemUtils {
      * </p>
      *
      * @return A directory.
-     * @throws SecurityException if a security manager exists and its {@code checkPropertyAccess} method doesn't allow access to the specified system property.
+     * @throws SecurityException Thrown if a security manager exists and its {@code checkPropertyAccess} method doesn't allow access to the specified system
+     *         property.
      * @see SystemProperties#getUserDir()
      * @since 2.1
      */
@@ -2266,7 +2288,8 @@ public class SystemUtils {
      * </p>
      *
      * @return A directory.
-     * @throws SecurityException if a security manager exists and its {@code checkPropertyAccess} method doesn't allow access to the specified system property.
+     * @throws SecurityException Thrown if a security manager exists and its {@code checkPropertyAccess} method doesn't allow access to the specified system
+     *         property.
      * @see SystemProperties#getUserDir()
      * @since 3.18.0
      */
@@ -2281,7 +2304,8 @@ public class SystemUtils {
      * </p>
      *
      * @return A directory.
-     * @throws SecurityException if a security manager exists and its {@code checkPropertyAccess} method doesn't allow access to the specified system property.
+     * @throws SecurityException Thrown if a security manager exists and its {@code checkPropertyAccess} method doesn't allow access to the specified system
+     *         property.
      * @see SystemProperties#getUserHome()
      * @since 2.1
      */
@@ -2296,7 +2320,8 @@ public class SystemUtils {
      * </p>
      *
      * @return A directory.
-     * @throws SecurityException if a security manager exists and its {@code checkPropertyAccess} method doesn't allow access to the specified system property.
+     * @throws SecurityException Thrown if a security manager exists and its {@code checkPropertyAccess} method doesn't allow access to the specified system
+     *         property.
      * @see SystemProperties#getUserHome()
      * @since 3.18.0
      */
@@ -2311,7 +2336,8 @@ public class SystemUtils {
      * </p>
      *
      * @return A name.
-     * @throws SecurityException if a security manager exists and its {@code checkPropertyAccess} method doesn't allow access to the specified system property.
+     * @throws SecurityException Thrown if a security manager exists and its {@code checkPropertyAccess} method doesn't allow access to the specified system
+     *         property.
      * @see SystemProperties#getUserName()
      * @since 3.10
      * @deprecated Use {@link SystemProperties#getUserName()}.
@@ -2329,7 +2355,8 @@ public class SystemUtils {
      *
      * @param defaultValue A default value.
      * @return A name.
-     * @throws SecurityException if a security manager exists and its {@code checkPropertyAccess} method doesn't allow access to the specified system property.
+     * @throws SecurityException Thrown if a security manager exists and its {@code checkPropertyAccess} method doesn't allow access to the specified system
+     *         property.
      * @see SystemProperties#getUserName()
      * @since 3.10
      * @deprecated Use {@link SystemProperties#getUserName(String)}.

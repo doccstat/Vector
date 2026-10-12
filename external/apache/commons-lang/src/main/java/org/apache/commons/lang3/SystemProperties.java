@@ -1601,7 +1601,7 @@ public final class SystemProperties {
     /**
      * Gets the current value for the property named {@code "SimpleClassName.Key"} as a {@code boolean}.
      * <p>
-     * The parsing rules are as {@link Boolean#parseBoolean(String)}.
+     * The parsing rules are defined by {@link Boolean#parseBoolean(String)}.
      * </p>
      * <p>
      * If a {@link SecurityException} is caught, the return value is {@code null}.
@@ -1622,7 +1622,7 @@ public final class SystemProperties {
     /**
      * Gets the current value for the property named {@code key} as a {@code boolean}.
      * <p>
-     * The parsing rules are as {@link Boolean#parseBoolean(String)}.
+     * The parsing rules are defined by {@link Boolean#parseBoolean(String)}.
      * </p>
      * <p>
      * If a {@link SecurityException} is caught, the return value is {@code null}.
@@ -3936,10 +3936,8 @@ public final class SystemProperties {
             }
             return StringUtils.getIfEmpty(System.getProperty(property), defaultIfAbsent);
         } catch (final SecurityException ignore) {
-            // We are not allowed to look at this property.
-            //
-            // System.err.println("Caught a SecurityException reading the system property '" + property
-            // + "'; the SystemUtils property value will default to null.");
+            // We are not allowed to look at this property; fall through to the default silently
+            // (the SecurityManager that raises this is terminally deprecated as of Java 17 / JEP 411).
             return defaultIfAbsent.get();
         }
     }

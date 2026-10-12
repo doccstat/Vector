@@ -206,6 +206,58 @@ class CharSequenceUtilsTest extends AbstractLangTest {
         assertEquals(expected, CharSequenceUtils.lastIndexOf(cs, search, start));
     }
 
+    /**
+     * Tests that the direct-scan fallback in {@link CharSequenceUtils#indexOf(CharSequence, CharSequence, int)} (taken by CharSequence
+     * types without a dedicated dispatch branch, such as {@code org.apache.commons.lang3.text.StrBuilder}) matches
+     * {@link String#indexOf(String, int)} semantics exactly and never materializes the searched sequence via {@code toString()}.
+     */
+    @Test
+    void testNewIndexOf() {
+        testNewIndexOfSingle("808087847-1321060740-635567660180086727-925755305", "-1321060740-635567660");
+        testNewIndexOfSingle("", "");
+        testNewIndexOfSingle("1", "");
+        testNewIndexOfSingle("", "1");
+        testNewIndexOfSingle("1", "1");
+        testNewIndexOfSingle("11", "1");
+        testNewIndexOfSingle("1", "11");
+        testNewIndexOfSingle("apache", "a");
+        testNewIndexOfSingle("apache", "p");
+        testNewIndexOfSingle("apache", "e");
+        testNewIndexOfSingle("apache", "x");
+        testNewIndexOfSingle("oraoraoraora", "r");
+        testNewIndexOfSingle("mudamudamudamuda", "d");
+        testNewIndexOfSingle("junk-ststarting", "starting");
+        // The searched sequence must not be copied by the fallback.
+        final CharSequence noToString = new WrapperString("hello world") {
+            @Override
+            public String toString() {
+                throw new AssertionError("cs.toString() must not be called by indexOf");
+            }
+        };
+        assertEquals(6, CharSequenceUtils.indexOf(noToString, "world", 0));
+        assertEquals(-1, CharSequenceUtils.indexOf(noToString, "worlds", 0));
+    }
+
+    private void testNewIndexOfSingle(final CharSequence a, final CharSequence b) {
+        final int maxa = Math.max(a.length(), b.length());
+        for (int i = -maxa - 10; i <= maxa + 10; i++) {
+            testNewIndexOfSingle(a, b, i);
+        }
+        testNewIndexOfSingle(a, b, Integer.MIN_VALUE);
+        testNewIndexOfSingle(a, b, Integer.MAX_VALUE);
+    }
+
+    private void testNewIndexOfSingle(final CharSequence a, final CharSequence b, final int start) {
+        testNewIndexOfSingleSingle(a, b, start);
+        testNewIndexOfSingleSingle(b, a, start);
+    }
+
+    private void testNewIndexOfSingleSingle(final CharSequence a, final CharSequence b, final int start) {
+        assertEquals(a.toString().indexOf(b.toString(), start),
+                CharSequenceUtils.indexOf(new WrapperString(a.toString()), new WrapperString(b.toString()), start),
+                "testNewIndexOf fails! original : " + a + " seg : " + b + " start : " + start);
+    }
+
     @Test
     void testNewLastIndexOf() {
         testNewLastIndexOfSingle("808087847-1321060740-635567660180086727-925755305", "-1321060740-635567660", 21);

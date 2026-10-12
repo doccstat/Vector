@@ -88,6 +88,11 @@ public class BitField {
 
     /**
      * Creates a BitField instance.
+     * <p>
+     * If any bit above bit 31 is set in the mask, the resulting field can only be used with the {@code long} holder accessors; the {@code int}, {@code short}
+     * and {@code byte} holder accessors throw {@link IllegalStateException} for such a field, because those holder types cannot contain the masked bits and
+     * would otherwise silently answer wrongly (shift counts are truncated mod 32 and negative holders are sign-extended into bits 32-63).
+     * </p>
      *
      * @param mask The mask specifying which bits apply to this BitField. Bits that are set in this mask are the bits that this BitField operates on.
      * @since 3.21.0
@@ -102,9 +107,11 @@ public class BitField {
      *
      * @param holder The int data containing the bits we're interested in.
      * @return The value of holder with the specified bits cleared (set to {@code 0}).
+     * @throws IllegalStateException Thrown if this field's mask has bits set above bit 31 (only possible via {@link #BitField(long)}) and so cannot be
+     *         represented in this holder type.
      */
     public int clear(final int holder) {
-        return (int) (holder & ~mask);
+        return (int) (holder & ~intMask());
     }
 
     /**
@@ -123,6 +130,8 @@ public class BitField {
      *
      * @param holder The byte data containing the bits we're interested in.
      * @return The value of holder with the specified bits cleared (set to {@code 0}).
+     * @throws IllegalStateException Thrown if this field's mask has bits set above bit 31 (only possible via {@link #BitField(long)}) and so cannot be
+     *         represented in this holder type.
      */
     public byte clearByte(final byte holder) {
         return (byte) clear(holder);
@@ -133,6 +142,8 @@ public class BitField {
      *
      * @param holder The short data containing the bits we're interested in.
      * @return The value of holder with the specified bits cleared (set to {@code 0}).
+     * @throws IllegalStateException Thrown if this field's mask has bits set above bit 31 (only possible via {@link #BitField(long)}) and so cannot be
+     *         represented in this holder type.
      */
     public short clearShort(final short holder) {
         return (short) clear(holder);
@@ -143,9 +154,11 @@ public class BitField {
      *
      * @param holder The int data containing the bits we're interested in.
      * @return The selected bits.
+     * @throws IllegalStateException Thrown if this field's mask has bits set above bit 31 (only possible via {@link #BitField(long)}) and so cannot be
+     *         represented in this holder type.
      */
     public int getRawValue(final int holder) {
-        return (int) (holder & mask);
+        return (int) (holder & intMask());
     }
 
     /**
@@ -160,10 +173,12 @@ public class BitField {
     }
 
     /**
-     * Obtains the value for the specified BitField, unshifted.
+     * Gets the value for the specified BitField, unshifted.
      *
      * @param holder The short data containing the bits we're interested in.
      * @return The selected bits.
+     * @throws IllegalStateException Thrown if this field's mask has bits set above bit 31 (only possible via {@link #BitField(long)}) and so cannot be
+     *         represented in this holder type.
      */
     public short getShortRawValue(final short holder) {
         return (short) getRawValue(holder);
@@ -179,6 +194,8 @@ public class BitField {
      * @param holder The short data containing the bits we're interested in.
      * @return The selected bits, shifted right appropriately.
      * @see #setShortValue(short,short)
+     * @throws IllegalStateException Thrown if this field's mask has bits set above bit 31 (only possible via {@link #BitField(long)}) and so cannot be
+     *         represented in this holder type.
      */
     public short getShortValue(final short holder) {
         return (short) getValue(holder);
@@ -194,6 +211,8 @@ public class BitField {
      * @param holder The int data containing the bits we're interested in.
      * @return The selected bits, shifted right appropriately.
      * @see #setValue(int,int)
+     * @throws IllegalStateException Thrown if this field's mask has bits set above bit 31 (only possible via {@link #BitField(long)}) and so cannot be
+     *         represented in this holder type.
      */
     public int getValue(final int holder) {
         return getRawValue(holder) >>> shiftCount;
@@ -216,6 +235,24 @@ public class BitField {
     }
 
     /**
+     * Verifies that this field's mask fits in an {@code int} holder before an {@code int}, {@code short} or {@code byte} accessor uses it.
+     * <p>
+     * Without this check, a mask with bits above bit 31 makes the narrow accessors silently wrong: the {@code int} shift count is truncated mod 32, and a
+     * negative narrow holder is sign-extended to 64 bits before the {@code long} mask is applied, reporting above-bit-31 flags as set even though the holder
+     * type cannot contain them.
+     * </p>
+     *
+     * @return the mask, guaranteed to fit in 32 bits.
+     * @throws IllegalStateException Thrown if the mask has bits set above bit 31.
+     */
+    private long intMask() {
+        if (mask >>> Integer.SIZE != 0) {
+            throw new IllegalStateException("BitField mask 0x" + Long.toHexString(mask) + " exceeds 32 bits; use the long accessors for this field.");
+        }
+        return mask;
+    }
+
+    /**
      * Tests whether all of the bits are set or not.
      * <p>
      * This is a stricter test than {@link #isSet(int)}, in that all of the bits in a multi-bit set must be set for this method to return {@code true}.
@@ -223,9 +260,12 @@ public class BitField {
      *
      * @param holder The int data containing the bits we're interested in.
      * @return {@code true} if all of the bits are set, else {@code false}.
+     * @throws IllegalStateException Thrown if this field's mask has bits set above bit 31 (only possible via {@link #BitField(long)}) and so cannot be
+     *         represented in this holder type.
      */
     public boolean isAllSet(final int holder) {
-        return (holder & mask) == mask;
+        final long intMask = intMask();
+        return (holder & intMask) == intMask;
     }
 
     /**
@@ -251,9 +291,11 @@ public class BitField {
      *
      * @param holder The int data containing the bits we're interested in
      * @return {@code true} if any of the bits are set, else {@code false}
+     * @throws IllegalStateException Thrown if this field's mask has bits set above bit 31 (only possible via {@link #BitField(long)}) and so cannot be
+     *         represented in this holder type.
      */
     public boolean isSet(final int holder) {
-        return (holder & mask) != 0;
+        return (holder & intMask()) != 0;
     }
 
     /**
@@ -276,9 +318,11 @@ public class BitField {
      *
      * @param holder The int data containing the bits we're interested in.
      * @return The value of holder with the specified bits set to {@code 1}.
+     * @throws IllegalStateException Thrown if this field's mask has bits set above bit 31 (only possible via {@link #BitField(long)}) and so cannot be
+     *         represented in this holder type.
      */
     public int set(final int holder) {
-        return (int) (holder | mask);
+        return (int) (holder | intMask());
     }
 
     /**
@@ -298,6 +342,8 @@ public class BitField {
      * @param holder The int data containing the bits we're interested in.
      * @param flag   indicating whether to set or clear the bits.
      * @return The value of holder with the specified bits set or cleared.
+     * @throws IllegalStateException Thrown if this field's mask has bits set above bit 31 (only possible via {@link #BitField(long)}) and so cannot be
+     *         represented in this holder type.
      */
     public int setBoolean(final int holder, final boolean flag) {
         return flag ? set(holder) : clear(holder);
@@ -320,6 +366,8 @@ public class BitField {
      *
      * @param holder The byte data containing the bits we're interested in
      * @return The value of holder with the specified bits set to {@code 1}
+     * @throws IllegalStateException Thrown if this field's mask has bits set above bit 31 (only possible via {@link #BitField(long)}) and so cannot be
+     *         represented in this holder type.
      */
     public byte setByte(final byte holder) {
         return (byte) set(holder);
@@ -331,6 +379,8 @@ public class BitField {
      * @param holder The byte data containing the bits we're interested in.
      * @param flag   indicating whether to set or clear the bits.
      * @return The value of holder with the specified bits set or cleared.
+     * @throws IllegalStateException Thrown if this field's mask has bits set above bit 31 (only possible via {@link #BitField(long)}) and so cannot be
+     *         represented in this holder type.
      */
     public byte setByteBoolean(final byte holder, final boolean flag) {
         return flag ? setByte(holder) : clearByte(holder);
@@ -341,6 +391,8 @@ public class BitField {
      *
      * @param holder The short data containing the bits we're interested in.
      * @return The value of holder with the specified bits set to {@code 1}.
+     * @throws IllegalStateException Thrown if this field's mask has bits set above bit 31 (only possible via {@link #BitField(long)}) and so cannot be
+     *         represented in this holder type.
      */
     public short setShort(final short holder) {
         return (short) set(holder);
@@ -352,6 +404,8 @@ public class BitField {
      * @param holder The short data containing the bits we're interested in.
      * @param flag   indicating whether to set or clear the bits.
      * @return The value of holder with the specified bits set or cleared.
+     * @throws IllegalStateException Thrown if this field's mask has bits set above bit 31 (only possible via {@link #BitField(long)}) and so cannot be
+     *         represented in this holder type.
      */
     public short setShortBoolean(final short holder, final boolean flag) {
         return flag ? setShort(holder) : clearShort(holder);
@@ -364,6 +418,8 @@ public class BitField {
      * @param value  The new value for the specified bits
      * @return The value of holder with the bits from the value parameter replacing the old bits
      * @see #getShortValue(short)
+     * @throws IllegalStateException Thrown if this field's mask has bits set above bit 31 (only possible via {@link #BitField(long)}) and so cannot be
+     *         represented in this holder type.
      */
     public short setShortValue(final short holder, final short value) {
         return (short) setValue(holder, value);
@@ -376,9 +432,12 @@ public class BitField {
      * @param value  The new value for the specified bits.
      * @return The value of holder with the bits from the value parameter replacing the old bits.
      * @see #getValue(int)
+     * @throws IllegalStateException Thrown if this field's mask has bits set above bit 31 (only possible via {@link #BitField(long)}) and so cannot be
+     *         represented in this holder type.
      */
     public int setValue(final int holder, final int value) {
-        return (int) (holder & ~mask | value << shiftCount & mask);
+        final long intMask = intMask();
+        return (int) (holder & ~intMask | value << shiftCount & intMask);
     }
 
     /**

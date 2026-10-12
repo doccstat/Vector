@@ -15,15 +15,12 @@
  * {@link io.github.libxposed.api.XposedModuleInterface#onModuleLoaded(XposedModuleInterface.ModuleLoadedParam)
  * onModuleLoaded()} is called.</p>
  *
- * <p>Modules targeting Xposed API 102 or higher must use the modern libxposed API directly and
- * must not call legacy {@code de.robv.android.xposed} APIs.</p>
- *
  * <h2>Entry Registration</h2>
  *
  * <p>Java entry classes are listed in {@code META-INF/xposed/java_init.list} (one fully-qualified
  * class name per line); native entries use {@code META-INF/xposed/native_init.list}. Place these
  * files under {@code src/main/resources/META-INF/xposed/} and Gradle will package them into the
- * APK automatically.</p>
+ * APK automatically. At least one Java entry must be provided.</p>
  *
  * <h2>Module Configuration</h2>
  *
@@ -41,9 +38,8 @@
  *     apply the module on apps outside the scope list</li>
  *     <li>{@code exceptionMode} (string) [protective|passthrough] - Default to protective, see
  *     {@link io.github.libxposed.api.XposedInterface.ExceptionMode}</li>
- *     <li>{@code autoHotReload} (boolean, API 102+) - whether app updates should automatically trigger hot
- *     reloading. Hot reloading is supported only for modules that declare exactly one Java entry
- *     class, and still proceeds only when
+ *     <li>{@code autoHotReload} (boolean, API 102+) - whether app updates should automatically
+ *     trigger hot reloading. App-update hot reloading still proceeds only when
  *     {@link io.github.libxposed.api.XposedModuleInterface#onHotReloading(XposedModuleInterface.HotReloadingParam)
  *     onHotReloading()} returns {@code true}.</li>
  * </ul>
@@ -54,7 +50,9 @@
  * The framework injects the module into all regular processes declared by those packages.
  * After injection, every loaded package in that process will trigger callbacks.
  * As a result, modules may receive callbacks beyond the originally scoped packages, so they
- * should always filter by process name and package name.</p>
+ * should always filter by process name and package name. For unnecessary processes, modules
+ * can call {@link io.github.libxposed.api.XposedInterfaceWrapper#detach() detach()}
+ * to stop receiving further callbacks. </p>
  *
  * <p>A special case applies to components declared with {@code android:process="system"} in a
  * {@code android:sharedUserId="android.uid.system"} package: they run in system server.
@@ -89,14 +87,6 @@
  *     });
  * }</pre>
  *
- * <p>Since API 102, hooks may be assigned an optional id through
- * {@link io.github.libxposed.api.XposedInterface.HookBuilder#setId(String) setId(String)}.
- * A hook id is scoped to the current module and executable. Installing another hook with the same
- * id replaces the old hook atomically, and
- * {@link io.github.libxposed.api.XposedInterface.HookHandle#replaceHook(XposedInterface.Hooker)
- * replaceHook(Hooker)} can atomically replace an existing hook handle while preserving its
- * executable, priority, exception handling mode, and id.</p>
- *
  * <h2>Invoker System</h2>
  *
  * <p>To call the original (or hooked) method bypassing access checks, obtain an
@@ -122,18 +112,16 @@
  *     onSystemServerStarting()} – called once when system server is starting. This callback
  *     replaces the first package load phase.</li>
  *     <li>{@link io.github.libxposed.api.XposedModuleInterface#onHotReloading(XposedModuleInterface.HotReloadingParam)
- *     onHotReloading()} - called in old code before hot reloading proceeds. Hot reloading is
- *     supported only for modules that declare exactly one Java entry class.</li>
+ *     onHotReloading()} - called in old code before hot reloading proceeds.</li>
  *     <li>{@link io.github.libxposed.api.XposedModuleInterface#onHotReloaded(XposedModuleInterface.HotReloadedParam)
- *     onHotReloaded()} - called in new code after hot reloading completes. Package lifecycle
- *     callbacks are not automatically replayed; modules that opt into hot reload should install or
- *     replace their hooks explicitly from this callback.</li>
+ *     onHotReloaded()} - called in new code after hot reloading completes.</li>
  * </ul>
  *
- * <p>Since API 102, an entry can call
- * {@link io.github.libxposed.api.XposedInterfaceWrapper#detach() detach()} after it no longer
- * needs lifecycle callbacks. This stops subsequent lifecycle callbacks only for the current entry;
- * hooks and other {@link io.github.libxposed.api.XposedInterface} APIs remain available.</p>
+ * <p>Hot reload is supported only for modules that declare exactly one Java entry class. Modules
+ * with zero or multiple Java entry classes are not hot-reloadable. Framework implementations may
+ * also report hot reload as unsupported when they cannot provide a valid new module generation for
+ * the requested module or target. The API does not mandate how frameworks stage code or native
+ * libraries across generations.</p>
  *
  * <h2>Error Handling</h2>
  *

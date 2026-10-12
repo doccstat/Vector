@@ -11,6 +11,7 @@
 #include <list>
 #include <map>
 #include <queue>
+#include <set>
 #include <stack>
 #include <string>
 #include <utility>
@@ -169,6 +170,40 @@ TEST(ranges_test, format_adl_begin_end) {
   EXPECT_EQ(fmt::format("{}", b), "[42]");
 }
 
+TEST(ranges_test, format_width) {
+  auto v = std::vector<int>{1, 2, 3};
+  EXPECT_EQ(fmt::format("{:20}", v), "[1, 2, 3]           ");
+  EXPECT_EQ(fmt::format("{:<20}", v), "[1, 2, 3]           ");
+  EXPECT_EQ(fmt::format("{:>20}", v), "           [1, 2, 3]");
+  EXPECT_EQ(fmt::format("{:^20}", v), "     [1, 2, 3]      ");
+  EXPECT_EQ(fmt::format("{:*>20}", v), "***********[1, 2, 3]");
+  EXPECT_EQ(fmt::format("{:*>{}}", v, 20), "***********[1, 2, 3]");
+  // The width applies to the composed output, not to the elements.
+  EXPECT_EQ(fmt::format("{:*>20n}", v), "*************1, 2, 3");
+  EXPECT_EQ(fmt::format("{:*>20:03}", v), "*****[001, 002, 003]");
+  // A leading ':' introduces the underlying spec and is not a fill character.
+  EXPECT_EQ(fmt::format("{::>5}", v), "[    1,     2,     3]");
+  // Output longer than the width is not truncated.
+  EXPECT_EQ(fmt::format("{:*>3}", v), "[1, 2, 3]");
+
+  auto s = std::set<int>{1, 2};
+  EXPECT_EQ(fmt::format("{:*>20}", s), "**************{1, 2}");
+
+  auto m = std::map<int, int>{{1, 2}};
+  EXPECT_EQ(fmt::format("{:*>20}", m), "**************{1: 2}");
+  EXPECT_EQ(fmt::format("{:*>10n}", m), "******1: 2");
+
+  auto vs = std::vector<std::string>{"a", "b"};
+  EXPECT_EQ(fmt::format("{:*>20}", vs), "**********[\"a\", \"b\"]");
+
+  EXPECT_EQ(fmt::format("{:*>20}", std::tuple<int, int>(1, 2)),
+            "**************(1, 2)");
+  EXPECT_EQ(fmt::format("{:*>20}", std::pair<int, int>(1, 2)),
+            "**************(1, 2)");
+  EXPECT_EQ(fmt::format("{:*>{}}", std::pair<int, int>(1, 2), 20),
+            "**************(1, 2)");
+}
+
 TEST(ranges_test, format_pair) {
   auto p = std::pair<int, float>(42, 1.5f);
   EXPECT_EQ(fmt::format("{}", p), "(42, 1.5)");
@@ -313,6 +348,10 @@ TEST(ranges_test, range_format_string) {
 TEST(ranges_test, range_format_debug_string) {
   const vector_debug_string v{'f', 'o', 'o'};
   EXPECT_EQ(fmt::format("{}", v), "\"foo\"");
+  EXPECT_EQ(fmt::format("{}", vector_debug_string{'\n'}), "\"\\n\"");
+  EXPECT_EQ(fmt::format("{}", vector_debug_string{'\\'}), "\"\\\\\"");
+  EXPECT_EQ(fmt::format("{}", vector_debug_string{'\"'}), "\"\\\"\"");
+  EXPECT_EQ(fmt::format("{:8}", vector_debug_string{'a'}), "\"a\"     ");
 }
 
 // A range that provides non-const only begin()/end() to test fmt::join
@@ -680,6 +719,25 @@ auto format_as(const tieable& t) -> std::tuple<int, double> {
 
 TEST(ranges_test, format_as_tie) {
   EXPECT_EQ(fmt::format("{}", tieable()), "(3, 0.42)");
+}
+
+struct format_as_tuple_like {};
+
+auto format_as(const format_as_tuple_like&) -> std::string { return "Hello"; }
+
+namespace std {
+template <> struct tuple_size<format_as_tuple_like>
+    : integral_constant<size_t, 1> {};
+template <> struct tuple_element<0, format_as_tuple_like> {
+  using type = format_as_tuple_like;
+};
+}  // namespace std
+
+TEST(ranges_test, format_as_tuple_like) {
+  static_assert(fmt::is_tuple_formattable<format_as_tuple_like, char>::value,
+                "format_as must not change tuple formattability");
+  EXPECT_TRUE((fmt::is_formattable<format_as_tuple_like>::value));
+  EXPECT_EQ(fmt::format("{}", format_as_tuple_like{}), "Hello");
 }
 
 struct lvalue_qualified_begin_end {

@@ -21,9 +21,11 @@ package org.apache.commons.lang3;
  * This exception supplements {@link UnsupportedOperationException}
  * by providing a more semantically rich description of the problem.
  *
- * <p>{@link NotImplementedException} represents the case where the
+ * <p>
+ * {@link NotImplementedException} represents the case where the
  * author has yet to implement the logic at this point in the program.
- * This can act as an exception based TODO tag.</p>
+ * This can act as an exception based TODO tag.
+ * </p>
  *
  * <pre>
  * public void foo() {
@@ -125,9 +127,8 @@ public class NotImplementedException extends UnsupportedOperationException {
     }
 
     /**
-     * Obtain the not implemented code. This is an unformatted piece of text intended to point to
-     * further information regarding the lack of implementation. It might, for example, be an issue
-     * tracker ID or a URL.
+     * Gets the code identifying why this operation is not implemented. This unformatted text can point to further information, such as an issue tracker ID or a
+     * URL.
      *
      * @return A code indicating a resource for more information regarding the lack of implementation
      */

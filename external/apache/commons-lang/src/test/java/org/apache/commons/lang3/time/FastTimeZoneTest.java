@@ -30,6 +30,8 @@ import java.util.TimeZone;
 
 import org.apache.commons.lang3.AbstractLangTest;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 /**
  * Tests {@link FastTimeZone}.
@@ -115,6 +117,24 @@ class FastTimeZoneTest extends AbstractLangTest {
     @Test
     void testOlson() {
         assertEquals(TimeZones.getTimeZone("America/New_York"), FastTimeZone.getTimeZone("America/New_York"));
+    }
+
+    /**
+     * A pattern that matches the regex but whose hours or minutes are out of range is not a valid GMT id. Before the fix these threw IllegalArgumentException
+     * from the GmtTimeZone constructor.
+     */
+    @ParameterizedTest
+    @ValueSource(strings = { "GMT+24", "+24", "-24", "+99", "+12:60", "00:99", "99:99", "0099", "9999" })
+    void testOutOfRangeOffsetReturnsNull(final String pattern) {
+        assertNull(FastTimeZone.getGmtTimeZone(pattern));
+    }
+
+    @Test
+    void testOutOfRangeOffsetViaGetTimeZoneFallsBack() {
+        // getTimeZone must not propagate the constructor exception; a null GMT result falls back to the JDK lookup.
+        final TimeZone tz = FastTimeZone.getTimeZone("GMT+24");
+        assertNotNull(tz);
+        assertEquals(0, tz.getRawOffset());
     }
 
     @Test

@@ -23,6 +23,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.lang.reflect.Constructor;
@@ -483,6 +484,20 @@ class DurationFormatUtilsTest extends AbstractLangTest {
         assertIllegalArgumentException(() -> DurationFormatUtils.formatPeriod(5000, 2500, "yy/MM"));
     }
 
+    @Test
+    void testFormatPeriodExtremeDatesWithOffsets() {
+        assertTimeoutPreemptively(Duration.ofSeconds(5), () -> {
+            final String format = "d H m s S";
+            final String expected = DurationFormatUtils.formatDuration(Long.MAX_VALUE, format);
+            for (final String zone : new String[] { "GMT", "GMT+14:00", "GMT-12:00" }) {
+                final TimeZone timeZone = TimeZones.getTimeZone(zone);
+                assertEquals(expected, DurationFormatUtils.formatPeriod(0, Long.MAX_VALUE, format, true, timeZone), zone);
+                assertEquals(expected, DurationFormatUtils.formatPeriod(Long.MIN_VALUE, -1, format, true, timeZone), zone);
+                assertEquals("213503982334", DurationFormatUtils.formatPeriod(Long.MIN_VALUE, Long.MAX_VALUE, "d", true, timeZone), zone);
+            }
+        });
+    }
+
     @SuppressWarnings("deprecation")
     @Test
     void testFormatPeriodISO() {
@@ -567,6 +582,59 @@ class DurationFormatUtilsTest extends AbstractLangTest {
                 DurationFormatUtils.formatPeriod(0, endMillis, "s", true, gmt));
     }
 
+    /**
+     * Leap-day boundaries across the year-normalization fast path (values verified against the previous year-by-year walk).
+     */
+    @Test
+    void testFormatPeriodLeapDayBoundaries() {
+        final TimeZone gmt = TimeZones.getTimeZone("GMT");
+        final Calendar leapDay = Calendar.getInstance(gmt);
+        leapDay.clear();
+        leapDay.set(2000, Calendar.FEBRUARY, 29, 0, 0, 0);
+        final Calendar feb28 = Calendar.getInstance(gmt);
+        feb28.clear();
+        feb28.set(2005, Calendar.FEBRUARY, 28, 0, 0, 0);
+        assertEquals("1826", DurationFormatUtils.formatPeriod(leapDay.getTimeInMillis(), feb28.getTimeInMillis(), "d", true, gmt));
+        final Calendar mar1 = Calendar.getInstance(gmt);
+        mar1.clear();
+        mar1.set(2005, Calendar.MARCH, 1, 0, 0, 0);
+        assertEquals("1827", DurationFormatUtils.formatPeriod(leapDay.getTimeInMillis(), mar1.getTimeInMillis(), "d", true, gmt));
+        final Calendar mar1999 = Calendar.getInstance(gmt);
+        mar1999.clear();
+        mar1999.set(1999, Calendar.MARCH, 1, 0, 0, 0);
+        assertEquals("2191", DurationFormatUtils.formatPeriod(mar1999.getTimeInMillis(), feb28.getTimeInMillis(), "d", true, gmt));
+    }
+
+    @Test
+    void testFormatPeriodLeapDayWithTimeBorrowing() {
+        final TimeZone timeZone = TimeZones.getTimeZone("GMT");
+        final Calendar start = Calendar.getInstance(timeZone);
+        start.clear();
+        start.set(2000, Calendar.FEBRUARY, 29, 23, 59, 59);
+        start.set(Calendar.MILLISECOND, 999);
+        final Calendar end = Calendar.getInstance(timeZone);
+        end.clear();
+        end.set(2005, Calendar.FEBRUARY, 28);
+        assertEquals("1825 0 0 0 001", DurationFormatUtils.formatPeriod(start.getTimeInMillis(), end.getTimeInMillis(), "d H m s S", true, timeZone));
+    }
+
+    @Test
+    void testFormatPeriodLocalDaysAcrossDaylightSaving() {
+        final TimeZone timeZone = TimeZones.getTimeZone("America/New_York");
+        final Calendar start = Calendar.getInstance(timeZone);
+        start.clear();
+        start.set(2024, Calendar.MARCH, 9, 12, 0, 0);
+        final Calendar end = (Calendar) start.clone();
+        end.add(Calendar.DAY_OF_MONTH, 1);
+        assertEquals(Duration.ofHours(23).toMillis(), end.getTimeInMillis() - start.getTimeInMillis());
+        assertEquals("1 0", DurationFormatUtils.formatPeriod(start.getTimeInMillis(), end.getTimeInMillis(), "d H", true, timeZone));
+        start.set(2024, Calendar.NOVEMBER, 2, 12, 0, 0);
+        end.setTimeInMillis(start.getTimeInMillis());
+        end.add(Calendar.DAY_OF_MONTH, 1);
+        assertEquals(Duration.ofHours(25).toMillis(), end.getTimeInMillis() - start.getTimeInMillis());
+        assertEquals("1 0", DurationFormatUtils.formatPeriod(start.getTimeInMillis(), end.getTimeInMillis(), "d H", true, timeZone));
+    }
+
     @Test
     void testFormatPeriodLongRangeBounds() {
         // A one-millisecond span sitting at the extremes of the long input range must still reduce
@@ -574,6 +642,58 @@ class DurationFormatUtilsTest extends AbstractLangTest {
         assertFormatPeriodOneMilli(Long.MAX_VALUE - 1, Long.MAX_VALUE);
         assertFormatPeriodOneMilli(Long.MIN_VALUE, Long.MIN_VALUE + 1);
         assertFormatPeriodOneMilli((long) Integer.MIN_VALUE - 1, Integer.MIN_VALUE);
+    }
+
+    /**
+     * The no-y/no-M path used to normalize years by walking the calendar one year per loop iteration, making the cost linear in the span: this case took ~292
+     * million Calendar round trips. It must complete promptly and produce the exact day count.
+     */
+    @Test
+    void testFormatPeriodMaximumSpanCompletesQuickly() {
+        final TimeZone gmt = TimeZones.getTimeZone("GMT");
+        // floor(Long.MAX_VALUE / MILLIS_PER_DAY) days from the epoch, with time-of-day remainders that never borrow.
+        assertTimeoutPreemptively(Duration.ofSeconds(5),
+                () -> assertEquals("106751991167", DurationFormatUtils.formatPeriod(0, Long.MAX_VALUE, "d", true, gmt)));
+    }
+
+    @Test
+    void testFormatPeriodWithoutMonths() {
+        final TimeZone timeZone = TimeZone.getTimeZone("UTC");
+        final Calendar start = Calendar.getInstance(timeZone);
+        start.set(2024, Calendar.DECEMBER, 15, 0, 0, 0);
+        start.set(Calendar.MILLISECOND, 0);
+
+        final Calendar end = Calendar.getInstance(timeZone);
+        end.set(2025, Calendar.JANUARY, 15, 0, 0, 0);
+        end.set(Calendar.MILLISECOND, 0);
+
+        // 31 days elapsed across year boundary
+        assertEquals("0 years 31 days", DurationFormatUtils.formatPeriod(start.getTimeInMillis(), end.getTimeInMillis(), "y' years 'd' days'", false, timeZone));
+        assertEquals("0y 31d", DurationFormatUtils.formatPeriod(start.getTimeInMillis(), end.getTimeInMillis(), "y'y 'd'd'", false, timeZone));
+
+        // 361 days elapsed (less than 1 full year)
+        start.set(2024, Calendar.JANUARY, 15, 0, 0, 0);
+        end.set(2025, Calendar.JANUARY, 10, 0, 0, 0);
+        assertEquals("0 years 361 days", DurationFormatUtils.formatPeriod(start.getTimeInMillis(), end.getTimeInMillis(), "y' years 'd' days'", false, timeZone));
+
+        // Leap year to non-leap year (Feb 29, 2024 to Feb 28, 2025 = 365 days)
+        start.set(2024, Calendar.FEBRUARY, 29, 0, 0, 0);
+        end.set(2025, Calendar.FEBRUARY, 28, 0, 0, 0);
+        assertEquals("0 years 365 days", DurationFormatUtils.formatPeriod(start.getTimeInMillis(), end.getTimeInMillis(), "y' years 'd' days'", false, timeZone));
+    }
+
+    @Test
+    void testFormatPeriodWithoutMonthsAfterLeapDayAnniversary() {
+        final TimeZone timeZone = TimeZone.getTimeZone("UTC");
+        final Calendar start = Calendar.getInstance(timeZone);
+        start.clear();
+        // 2020 was a leap year
+        start.set(2020, Calendar.FEBRUARY, 29);
+        final Calendar end = Calendar.getInstance(timeZone);
+        end.clear();
+        // 2021 was not a leap year
+        end.set(2021, Calendar.MARCH, 1);
+        assertEquals("1 years 1 days", DurationFormatUtils.formatPeriod(start.getTimeInMillis(), end.getTimeInMillis(), "y' years 'd' days'", false, timeZone));
     }
 
     /**
@@ -790,4 +910,5 @@ class DurationFormatUtilsTest extends AbstractLangTest {
         assertIllegalArgumentException(() -> DurationFormatUtils.formatDuration(1, "[[s"));
         assertIllegalArgumentException(() -> DurationFormatUtils.formatDuration(1, "[s]]"));
     }
+
 }

@@ -24,10 +24,10 @@ import java.text.ParseException;
 import java.text.ParsePosition;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Comparator;
 import java.util.Date;
+import java.util.GregorianCalendar;
 import java.util.HashMap;
 import java.util.List;
 import java.util.ListIterator;
@@ -119,11 +119,27 @@ public class FastDateParser implements DateParser, Serializable {
          */
         @Override
         void setCalendar(final FastDateParser parser, final Calendar calendar, final String value) {
-            final String lowerCase = value.toLowerCase(locale);
+            String lowerCase = value.toLowerCase(locale);
             Integer iVal = lKeyValues.get(lowerCase);
             if (iVal == null) {
                 // match missing the optional trailing period
                 iVal = lKeyValues.get(lowerCase + '.');
+            }
+            if (iVal == null) {
+                // The regex matches case-insensitively via Unicode case folding ("(?iu)"), which is a
+                // wider equivalence than the toLowerCase(locale) fold used to build the key map; retry
+                // with the root-locale fold so that, for example, ASCII input under locales with
+                // special casing rules still resolves to the same key.
+                lowerCase = value.toLowerCase(Locale.ROOT);
+                iVal = lKeyValues.get(lowerCase);
+                if (iVal == null) {
+                    iVal = lKeyValues.get(lowerCase + '.');
+                }
+            }
+            if (iVal == null) {
+                // Converted to a parse failure by PatternStrategy.parse instead of surfacing as an
+                // undeclared NullPointerException.
+                throw new IllegalArgumentException("Invalid display name for field " + field + ": '" + value + "'");
             }
             // LANG-1669: Mimic fix done in OpenJDK 17 to resolve issue with parsing newly supported day periods added in OpenJDK 16
             if (Calendar.AM_PM != this.field || iVal <= 1) {
@@ -193,14 +209,14 @@ public class FastDateParser implements DateParser, Serializable {
     private static final class ISO8601TimeZoneStrategy extends PatternStrategy {
         // Z, +hh, -hh, +hhmm, -hhmm, +hh:mm or -hh:mm
 
-        private static final Strategy ISO_8601_1_STRATEGY = new ISO8601TimeZoneStrategy("(Z|(?:[+-]\\d{2}))");
+        private static final Strategy ISO_8601_1_STRATEGY = new ISO8601TimeZoneStrategy("(Z|(?:[+-](?:2[0-3]|[01]\\d)))");
 
-        private static final Strategy ISO_8601_2_STRATEGY = new ISO8601TimeZoneStrategy("(Z|(?:[+-]\\d{2}\\d{2}))");
+        private static final Strategy ISO_8601_2_STRATEGY = new ISO8601TimeZoneStrategy("(Z|(?:[+-](?:2[0-3]|[01]\\d)[0-5]\\d))");
 
-        private static final Strategy ISO_8601_3_STRATEGY = new ISO8601TimeZoneStrategy("(Z|(?:[+-]\\d{2}(?::)\\d{2}))");
+        private static final Strategy ISO_8601_3_STRATEGY = new ISO8601TimeZoneStrategy("(Z|(?:[+-](?:2[0-3]|[01]\\d)(?::)[0-5]\\d))");
 
         /**
-         * Factory method for ISO8601TimeZoneStrategies.
+         * Gets the ISO 8601 time zone strategy.
          *
          * @param tokenLen A token indicating the length of the TimeZone String to be formatted.
          * @return A ISO8601TimeZoneStrategy that can format TimeZone String of length {@code tokenLen}. If no such strategy exists, an IllegalArgumentException
@@ -342,7 +358,7 @@ public class FastDateParser implements DateParser, Serializable {
         }
 
         /**
-         * Is this field a number? The default implementation returns false.
+         * Tests whether this field is numeric. The default implementation returns false.
          *
          * @return true, if field is a number
          */
@@ -358,8 +374,17 @@ public class FastDateParser implements DateParser, Serializable {
                 pos.setErrorIndex(pos.getIndex());
                 return false;
             }
+            try {
+                setCalendar(parser, calendar, matcher.group(1));
+            } catch (final IllegalArgumentException e) {
+                // A matched field whose value cannot be interpreted (for example an out-of-range GMT
+                // offset or a display name the key map cannot resolve) is a parse failure, reported
+                // through the ParsePosition error index, not an undeclared runtime exception:
+                // the public parse methods declare only ParseException.
+                pos.setErrorIndex(pos.getIndex());
+                return false;
+            }
             pos.setIndex(pos.getIndex() + matcher.end(1));
-            setCalendar(parser, calendar, matcher.group(1));
             return true;
         }
 
@@ -383,7 +408,7 @@ public class FastDateParser implements DateParser, Serializable {
     private abstract static class Strategy {
 
         /**
-         * Is this field a number? The default implementation returns false.
+         * Tests whether this field is numeric. The default implementation returns false.
          *
          * @return true, if field is a number
          */
@@ -498,7 +523,7 @@ public class FastDateParser implements DateParser, Serializable {
             }
         }
 
-        private static final String RFC_822_TIME_ZONE = "[+-]\\d{4}";
+        private static final String RFC_822_TIME_ZONE = "[+-](?:2[0-3]|[01]\\d)[0-5]\\d";
 
         private static final String GMT_OPTION = TimeZones.GMT_ID + "[+-]\\d{1,2}:\\d{2}";
 
@@ -606,10 +631,11 @@ public class FastDateParser implements DateParser, Serializable {
                     // match missing the optional trailing period
                     tzInfo = tzNames.get(timeZone + '.');
                     if (tzInfo == null) {
-                        // show chars in case this is multiple byte character issue
-                        final char[] charArray = timeZone.toCharArray();
-                        throw new IllegalStateException(String.format("Can't find time zone '%s' (%d %s) in %s", timeZone, charArray.length,
-                                Arrays.toString(charArray), new TreeSet<>(tzNames.keySet())));
+                        // Converted to a parse failure by PatternStrategy.parse instead of surfacing as an
+                        // undeclared IllegalStateException; the message is bounded by the matched input
+                        // (no dump of the entire time zone name table).
+                        throw new IllegalArgumentException(
+                                String.format("Can't find time zone '%s' (%d chars)", timeZone, timeZone.length()));
                     }
                 }
                 calendar.set(Calendar.DST_OFFSET, tzInfo.dstOffset);
@@ -630,6 +656,81 @@ public class FastDateParser implements DateParser, Serializable {
     }
 
     /**
+     * A write-through recorder used while parsing a pattern that contains a week year ('Y'). Every mutation is delegated to the real target calendar
+     * unchanged, and the raw values assigned to the three week-date fields are additionally captured, so that after all fields are parsed the week date can
+     * be resolved from exactly what was parsed - mirroring {@code java.text.CalendarBuilder}, which {@link java.text.SimpleDateFormat} uses for the same
+     * purpose. (Reading the values back from the calendar instead would normalize them: {@link Calendar#get(int)} resolves the complete date, so a parsed
+     * week 53 read back through a calendar-year interpretation can roll the year and land a full year away.)
+     */
+    private static final class WeekDateRecorder extends GregorianCalendar {
+
+        private static final long serialVersionUID = 1L;
+
+        /** The calendar every mutation is delegated to. */
+        private final Calendar target;
+
+        private transient int weekYearValue;
+        private transient boolean weekYearSet;
+        private transient int weekOfYearValue;
+        private transient boolean weekOfYearSet;
+        private transient int dayOfWeekValue;
+        private transient boolean dayOfWeekSet;
+
+        WeekDateRecorder(final Calendar target) {
+            this.target = target;
+        }
+
+        /**
+         * Resolves the recorded week year through the target calendar's week-date machinery. The parsed 'Y' value was delegated into {@link Calendar#YEAR}
+         * by the number strategy; {@link Calendar#setWeekDate(int, int, int)} reinterprets it as a week year together with the parsed week of year and day
+         * of week, defaulting to week 1 and the calendar's first day-of-week when the pattern did not contain them (the same defaults as
+         * {@code java.text.CalendarBuilder}). The fields set by {@code setWeekDate} take precedence over any month/day fields parsed earlier, which matches
+         * {@link java.text.SimpleDateFormat}.
+         */
+        void applyWeekDate() {
+            if (weekYearSet) {
+                target.setWeekDate(weekYearValue, weekOfYearSet ? weekOfYearValue : 1, dayOfWeekSet ? dayOfWeekValue : target.getFirstDayOfWeek());
+            }
+        }
+
+        @Override
+        public void set(final int field, final int value) {
+            if (target == null) {
+                // Callers from the superclass constructors, before this recorder is fully constructed.
+                super.set(field, value);
+                return;
+            }
+            switch (field) {
+            case Calendar.YEAR:
+                weekYearValue = value;
+                weekYearSet = true;
+                break;
+            case Calendar.WEEK_OF_YEAR:
+                weekOfYearValue = value;
+                weekOfYearSet = true;
+                break;
+            case Calendar.DAY_OF_WEEK:
+                dayOfWeekValue = value;
+                dayOfWeekSet = true;
+                break;
+            default:
+                break;
+            }
+            target.set(field, value);
+        }
+
+        @Override
+        public void setTimeZone(final TimeZone zone) {
+            if (target == null) {
+                // Callers from the superclass constructors, before this recorder is fully constructed.
+                super.setTimeZone(zone);
+                return;
+            }
+            target.setTimeZone(zone);
+        }
+    }
+
+    /**
      * Required for serialization support.
      *
      * @see java.io.Serializable
@@ -638,13 +739,13 @@ public class FastDateParser implements DateParser, Serializable {
 
     static final Locale JAPANESE_IMPERIAL = new Locale("ja", "JP", "JP");
 
+    // helper classes to parse the format string
+
     /**
      * comparator used to sort regex alternatives. Alternatives should be ordered longer first, and shorter last. ('february' before 'feb'). All entries must be
      * lower-case by locale.
      */
     private static final Comparator<String> LONGER_FIRST_LOWERCASE = Comparator.reverseOrder();
-
-    // helper classes to parse the format string
 
     @SuppressWarnings("unchecked") // OK because we are creating an array with no entries
     private static final ConcurrentMap<Locale, Strategy>[] CACHES = new ConcurrentMap[Calendar.FIELD_COUNT];
@@ -809,6 +910,12 @@ public class FastDateParser implements DateParser, Serializable {
     private transient List<StrategyAndWidth> patterns;
 
     /**
+     * Whether the pattern contains a week-year field ('Y'). Derived from the pattern in {@link #init(Calendar)} (called from the constructor and from
+     * readObject), so it does not need to be serialized.
+     */
+    private transient volatile boolean weekYear;
+
+    /**
      * Constructs a new FastDateParser.
      *
      * Use {@link FastDateFormat#getInstance(String, TimeZone, Locale)} or another variation of the factory methods of {@link FastDateFormat} to get a cached
@@ -833,7 +940,8 @@ public class FastDateParser implements DateParser, Serializable {
      */
     protected FastDateParser(final String pattern, final TimeZone timeZone, final Locale locale, final Date centuryStart) {
         this.pattern = Objects.requireNonNull(pattern, "pattern");
-        this.timeZone = Objects.requireNonNull(timeZone, "timeZone");
+        // TimeZone is mutable and instances are shared through the FastDateFormat cache.
+        this.timeZone = (TimeZone) Objects.requireNonNull(timeZone, "timeZone").clone();
         this.locale = LocaleUtils.toLocale(locale);
         final Calendar definingCalendar = Calendar.getInstance(timeZone, this.locale);
         final int centuryStartYear;
@@ -898,7 +1006,7 @@ public class FastDateParser implements DateParser, Serializable {
     }
 
     /**
-     * Constructs a Strategy that parses a Text field
+     * Gets a strategy that parses a text field.
      *
      * @param field            The Calendar field
      * @param definingCalendar The calendar to obtain the short and long values
@@ -917,6 +1025,10 @@ public class FastDateParser implements DateParser, Serializable {
     @Override
     public String getPattern() {
         return pattern;
+    }
+
+    List<StrategyAndWidth> getPatterns() {
+        return patterns;
     }
 
     /**
@@ -965,7 +1077,16 @@ public class FastDateParser implements DateParser, Serializable {
         case 'w':
             return WEEK_OF_YEAR_STRATEGY;
         case 'y':
+            return width > 2 ? LITERAL_YEAR_STRATEGY : ABBREVIATED_YEAR_STRATEGY;
         case 'Y':
+            // Week year: the number is parsed like a year (including the two-digit-century adjustment,
+            // as SimpleDateFormat does for 'YY'), but it must be resolved through the calendar's
+            // week-date machinery rather than Calendar.YEAR. Record that this pattern contains a week
+            // year; parse(String, ParsePosition, Calendar) re-resolves the date via setWeekDate,
+            // mirroring FastDatePrinter's WeekYear rule and java.text.CalendarBuilder. When the
+            // calendar does not support week dates, the value falls back to Calendar.YEAR, exactly
+            // like FastDatePrinter's fallback.
+            weekYear = true;
             return width > 2 ? LITERAL_YEAR_STRATEGY : ABBREVIATED_YEAR_STRATEGY;
         case 'X':
             return ISO8601TimeZoneStrategy.getStrategy(width);
@@ -988,7 +1109,7 @@ public class FastDateParser implements DateParser, Serializable {
      */
     @Override
     public TimeZone getTimeZone() {
-        return timeZone;
+        return (TimeZone) timeZone.clone();
     }
 
     /**
@@ -1070,20 +1191,25 @@ public class FastDateParser implements DateParser, Serializable {
      * @param pos      On input, the position in the source to start parsing, on output, updated position.
      * @param calendar The calendar into which to set parsed fields.
      * @return true, if source has been parsed (pos parsePosition is updated); otherwise false (and pos errorIndex is updated)
-     * @throws IllegalArgumentException when Calendar has been set to be not lenient, and a parsed field is out of range.
+     * @throws IllegalArgumentException Thrown when Calendar has been set to be not lenient, and a parsed field is out of range.
      */
     @Override
     public boolean parse(final String source, final ParsePosition pos, final Calendar calendar) {
         if (!checkLength(source, pos)) {
             return false;
         }
+        final WeekDateRecorder recorder = weekYear && calendar.isWeekDateSupported() ? new WeekDateRecorder(calendar) : null;
+        final Calendar sink = recorder != null ? recorder : calendar;
         final ListIterator<StrategyAndWidth> lt = patterns.listIterator();
         while (lt.hasNext()) {
             final StrategyAndWidth strategyAndWidth = lt.next();
             final int maxWidth = strategyAndWidth.getMaxWidth(lt);
-            if (!strategyAndWidth.strategy.parse(this, calendar, source, pos, maxWidth)) {
+            if (!strategyAndWidth.strategy.parse(this, sink, source, pos, maxWidth)) {
                 return false;
             }
+        }
+        if (recorder != null) {
+            recorder.applyWeekDate();
         }
         return true;
     }
@@ -1112,8 +1238,8 @@ public class FastDateParser implements DateParser, Serializable {
      * Creates the object after serialization. This implementation reinitializes the transient properties.
      *
      * @param in ObjectInputStream from which the object is being deserialized.
-     * @throws IOException            if there is an IO issue.
-     * @throws ClassNotFoundException if a class cannot be found.
+     * @throws IOException            Thrown if there is an IO issue.
+     * @throws ClassNotFoundException Thrown if a class cannot be found.
      */
     private void readObject(final ObjectInputStream in) throws IOException, ClassNotFoundException {
         in.defaultReadObject();
@@ -1131,6 +1257,7 @@ public class FastDateParser implements DateParser, Serializable {
     public String toString() {
         return "FastDateParser[" + pattern + ", " + locale + ", " + timeZone.getID() + "]";
     }
+
 
     /**
      * Converts all state of this instance to a String handy for debugging.

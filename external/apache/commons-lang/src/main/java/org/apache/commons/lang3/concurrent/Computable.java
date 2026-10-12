@@ -21,9 +21,13 @@ import org.apache.commons.lang3.function.FailableFunction;
 /**
  * Definition of an interface for a wrapper around a calculation that takes a single parameter and returns a result.
  *
- * <p>This interface allows for wrapping a calculation into a class so that it maybe passed around an application.</p>
+ * <p>
+ * This interface allows for wrapping a calculation into a class so that it maybe passed around an application.
+ * </p>
  *
- * <p>See also {@code FailableFunction<I, O, InterruptedException>}.</p>
+ * <p>
+ * See also {@code FailableFunction<I, O, InterruptedException>}.
+ * </p>
  *
  * @param <I> The type of the input to the calculation
  * @param <O> The type of the output of the calculation
@@ -39,8 +43,7 @@ public interface Computable<I, O> {
      * @param arg
      *            the argument for the calculation
      * @return The result of the calculation
-     * @throws InterruptedException
-     *             thrown if the calculation is interrupted
+     * @throws InterruptedException Thrown if the calculation is interrupted.
      */
     O compute(I arg) throws InterruptedException;
 }

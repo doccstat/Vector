@@ -17,11 +17,14 @@
 package org.apache.commons.lang3.builder;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
@@ -154,6 +157,21 @@ class RecursiveToStringStyleTest extends AbstractLangTest {
         assertEquals(baseStr + "[<null>]", new ToStringBuilder(base).append((Object) array).toString());
     }
 
+    /**
+     * With an output-length limit configured, nested objects past the limit are elided with a
+     * clear truncation marker.
+     */
+    @Test
+    void testMaxOutputLengthTruncates() {
+        final List<Object> list = new ArrayList<>();
+        for (int i = 0; i < 100; i++) {
+            list.add(new ArrayList<>(Collections.singletonList("item" + i)));
+        }
+        final String s = new ToStringBuilder(base, RecursiveToStringStyle.builder().setMaxOutputLength(200).get()).append("g", list, true).toString();
+        assertTrue(s.contains("...<truncated>"), "Truncation marker expected: " + s);
+        assertTrue(s.length() < 10_000, "Output must be throttled, was " + s.length());
+    }
+
     @Test
     void testMutableWrapperArray() {
         assertEquals(baseStr + "[{<null>,5,{3,6}}]",
@@ -230,5 +248,36 @@ class RecursiveToStringStyleTest extends AbstractLangTest {
         assertEquals(baseStr + "[{<null>,5,{3.0,6.0}}]", new ToStringBuilder(base).append(new Object[] { null, base, new Double[] { 3d, 6d } }).toString());
         assertEquals(baseStr + "[{<null>,5,{true,false}}]",
                 new ToStringBuilder(base).append(new Object[] { null, base, new Boolean[] { true, false } }).toString());
+    }
+
+    /**
+     * A shared (acyclic) reference is detailed once per top-level call; the second occurrence
+     * is rendered in the abbreviated {@code Object.toString()} format instead of re-traversed.
+     */
+    @Test
+    void testSharedReferenceDetailedOnce() {
+        final ArrayList<Object> shared = new ArrayList<>(Collections.singletonList("x"));
+        final String sharedStr = "java.util.ArrayList@" + Integer.toHexString(System.identityHashCode(shared));
+        assertEquals(baseStr + "[a=" + sharedStr + "{x},b=" + sharedStr + "]",
+                new ToStringBuilder(base).append("a", shared, true).append("b", shared, true).toString());
+    }
+
+    /**
+     * A deep reference diamond (each level holding two references to the same child) must be
+     * traversed in linear time and produce linear output. Without the per-call visited set,
+     * this 40-level diamond would require ~2^40 traversals.
+     */
+    @Test
+    void testSharedReferenceDiamondIsLinear() {
+        List<Object> child = new ArrayList<>(Collections.singletonList("leaf"));
+        for (int i = 0; i < 40; i++) {
+            final List<Object> parent = new ArrayList<>();
+            parent.add(child);
+            parent.add(child);
+            child = parent;
+        }
+        final String s = new ToStringBuilder(base).append("g", child, true).toString();
+        assertTrue(s.contains("leaf"), "The graph content must still be rendered");
+        assertTrue(s.length() < 100_000, "Output must be linear in graph size, was " + s.length());
     }
 }

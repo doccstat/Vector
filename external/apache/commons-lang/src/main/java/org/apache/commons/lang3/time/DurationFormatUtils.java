@@ -20,7 +20,6 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
-import java.util.GregorianCalendar;
 import java.util.Objects;
 import java.util.TimeZone;
 import java.util.stream.Stream;
@@ -342,7 +341,7 @@ public class DurationFormatUtils {
      * @param durationMillis The duration to format.
      * @param format         The way in which to format the duration, not null.
      * @return The formatted duration, not null.
-     * @throws IllegalArgumentException if durationMillis is negative.
+     * @throws IllegalArgumentException Thrown if durationMillis is negative.
      */
     public static String formatDuration(final long durationMillis, final String format) {
         return formatDuration(durationMillis, format, true);
@@ -358,7 +357,7 @@ public class DurationFormatUtils {
      * @param format         The way in which to format the duration, not null.
      * @param padWithZeros   whether to pad the left-hand side of numbers with 0's.
      * @return The formatted duration, not null.
-     * @throws IllegalArgumentException if durationMillis is negative.
+     * @throws IllegalArgumentException Thrown if durationMillis is negative.
      */
     public static String formatDuration(final long durationMillis, final String format, final boolean padWithZeros) {
         Validate.inclusiveBetween(0, Long.MAX_VALUE, durationMillis, "durationMillis must not be negative");
@@ -395,7 +394,7 @@ public class DurationFormatUtils {
      *
      * @param durationMillis The duration to format.
      * @return The formatted duration, not null.
-     * @throws IllegalArgumentException if durationMillis is negative.
+     * @throws IllegalArgumentException Thrown if durationMillis is negative.
      */
     public static String formatDurationHMS(final long durationMillis) {
         return formatDuration(durationMillis, "HH:mm:ss.SSS");
@@ -412,7 +411,7 @@ public class DurationFormatUtils {
      *
      * @param durationMillis The duration to format.
      * @return The formatted duration, not null.
-     * @throws IllegalArgumentException if durationMillis is negative.
+     * @throws IllegalArgumentException Thrown if durationMillis is negative.
      */
     public static String formatDurationISO(final long durationMillis) {
         return formatDuration(durationMillis, ISO_EXTENDED_FORMAT_PATTERN, false);
@@ -428,7 +427,7 @@ public class DurationFormatUtils {
      * @param suppressLeadingZeroElements  suppresses leading 0 elements.
      * @param suppressTrailingZeroElements suppresses trailing 0 elements.
      * @return The formatted text in days/hours/minutes/seconds, not null.
-     * @throws IllegalArgumentException if durationMillis is negative.
+     * @throws IllegalArgumentException Thrown if durationMillis is negative.
      */
     public static String formatDurationWords(final long durationMillis, final boolean suppressLeadingZeroElements, final boolean suppressTrailingZeroElements) {
         // This method is generally replaceable by the format method, but
@@ -494,7 +493,7 @@ public class DurationFormatUtils {
      * @param endMillis   The end of the duration.
      * @param format      The way in which to format the duration, not null.
      * @return The formatted duration, not null.
-     * @throws IllegalArgumentException if startMillis is greater than endMillis.
+     * @throws IllegalArgumentException Thrown if startMillis is greater than endMillis.
      */
     public static String formatPeriod(final long startMillis, final long endMillis, final String format) {
         return formatPeriod(startMillis, endMillis, format, true, TimeZone.getDefault());
@@ -520,7 +519,7 @@ public class DurationFormatUtils {
      * @param padWithZeros whether to pad the left-hand side of numbers with 0's.
      * @param timezone     The millis are defined in.
      * @return The formatted duration, not null.
-     * @throws IllegalArgumentException if startMillis is greater than endMillis.
+     * @throws IllegalArgumentException Thrown if startMillis is greater than endMillis.
      */
     public static String formatPeriod(final long startMillis, final long endMillis, final String format, final boolean padWithZeros,
             final TimeZone timezone) {
@@ -542,7 +541,9 @@ public class DurationFormatUtils {
         long seconds = end.get(Calendar.SECOND) - start.get(Calendar.SECOND);
         long minutes = end.get(Calendar.MINUTE) - start.get(Calendar.MINUTE);
         long hours = end.get(Calendar.HOUR_OF_DAY) - start.get(Calendar.HOUR_OF_DAY);
-        long days = end.get(Calendar.DAY_OF_MONTH) - start.get(Calendar.DAY_OF_MONTH);
+        final boolean calendarUnits = Token.containsTokenWithValue(tokens, y) || Token.containsTokenWithValue(tokens, M);
+        // Without years or months, count local dates directly instead of visiting every intervening month.
+        long days = calendarUnits ? end.get(Calendar.DAY_OF_MONTH) - start.get(Calendar.DAY_OF_MONTH) : localEpochDay(end) - localEpochDay(start);
         long months = end.get(Calendar.MONTH) - start.get(Calendar.MONTH);
         long years = end.get(Calendar.YEAR) - start.get(Calendar.YEAR);
         // each initial estimate is adjusted in case it is under 0
@@ -562,7 +563,7 @@ public class DurationFormatUtils {
             hours += HOURS_PER_DAY;
             days -= 1;
         }
-        if (Token.containsTokenWithValue(tokens, M)) {
+        if (calendarUnits) {
             while (days < 0) {
                 days += start.getActualMaximum(Calendar.DAY_OF_MONTH);
                 months -= 1;
@@ -578,35 +579,16 @@ public class DurationFormatUtils {
                     years = 0;
                 }
             }
+            if (!Token.containsTokenWithValue(tokens, M)) {
+                while (months > 0) {
+                    days += start.getActualMaximum(Calendar.DAY_OF_MONTH);
+                    months -= 1;
+                    start.add(Calendar.MONTH, 1);
+                }
+            }
         } else {
-            // there are no M's in the format string
-            if (!Token.containsTokenWithValue(tokens, y)) {
-                int target = end.get(Calendar.YEAR);
-                if (months < 0) {
-                    // target is end-year -1
-                    target -= 1;
-                }
-                while (start.get(Calendar.YEAR) != target) {
-                    days += start.getActualMaximum(Calendar.DAY_OF_YEAR) - start.get(Calendar.DAY_OF_YEAR);
-                    // Not sure I grok why this is needed, but the brutal tests show it is
-                    if (start instanceof GregorianCalendar && start.get(Calendar.MONTH) == Calendar.FEBRUARY && start.get(Calendar.DAY_OF_MONTH) == 29) {
-                        days += 1;
-                    }
-                    start.add(Calendar.YEAR, 1);
-                    days += start.get(Calendar.DAY_OF_YEAR);
-                }
-                years = 0;
-            }
-            while (start.get(Calendar.MONTH) != end.get(Calendar.MONTH)) {
-                days += start.getActualMaximum(Calendar.DAY_OF_MONTH);
-                start.add(Calendar.MONTH, 1);
-            }
             months = 0;
-            while (days < 0) {
-                days += start.getActualMaximum(Calendar.DAY_OF_MONTH);
-                months -= 1;
-                start.add(Calendar.MONTH, 1);
-            }
+            years = 0;
         }
         // The rest of this code adds in values that
         // aren't requested. This allows the user to ask for the
@@ -639,7 +621,7 @@ public class DurationFormatUtils {
      * @param startMillis The start of the duration to format.
      * @param endMillis   The end of the duration to format.
      * @return The formatted duration, not null.
-     * @throws IllegalArgumentException if startMillis is greater than endMillis.
+     * @throws IllegalArgumentException Thrown if startMillis is greater than endMillis.
      */
     public static String formatPeriodISO(final long startMillis, final long endMillis) {
         return formatPeriod(startMillis, endMillis, ISO_EXTENDED_FORMAT_PATTERN, false, TimeZone.getDefault());
@@ -754,6 +736,19 @@ public class DurationFormatUtils {
             throw new IllegalArgumentException("Unmatched optional in format: " + format);
         }
         return list.toArray(Token.EMPTY_ARRAY);
+    }
+
+    /**
+     * Computes the local epoch day without overflowing at either end of the millisecond range.
+     *
+     * @param calendar the calendar to convert.
+     * @return the local epoch day.
+     */
+    private static long localEpochDay(final Calendar calendar) {
+        final long millis = calendar.getTimeInMillis();
+        final long offset = (long) calendar.get(Calendar.ZONE_OFFSET) + calendar.get(Calendar.DST_OFFSET);
+        return Math.floorDiv(millis, DateUtils.MILLIS_PER_DAY)
+                + Math.floorDiv(Math.floorMod(millis, DateUtils.MILLIS_PER_DAY) + offset, DateUtils.MILLIS_PER_DAY);
     }
 
     /**

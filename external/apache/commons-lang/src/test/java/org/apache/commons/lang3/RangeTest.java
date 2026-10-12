@@ -347,6 +347,29 @@ class RangeTest extends AbstractLangTest {
     }
 
     @Test
+    void testNaNEndpointsRejected() {
+        // A NaN endpoint sorts above every value under Double/Float.compareTo's total order, silently
+        // constructing a half-unbounded range: contains()/fit() then accept every value above the minimum.
+        // Construction fails closed instead (mirroring Validate.notNaN); non-NaN behavior is unchanged.
+        assertIllegalArgumentException(() -> Range.of(5.0, Double.NaN));
+        assertIllegalArgumentException(() -> Range.of(Double.NaN, 5.0));
+        assertIllegalArgumentException(() -> Range.of(5.0f, Float.NaN));
+        assertIllegalArgumentException(() -> Range.of(Float.NaN, 5.0f));
+        assertIllegalArgumentException(() -> Range.between(5.0, Double.NaN));
+        assertIllegalArgumentException(() -> Range.between(5.0f, Float.NaN));
+        assertIllegalArgumentException(() -> Range.is(Double.NaN));
+        assertIllegalArgumentException(() -> Range.is(Float.NaN));
+        // rejected under a custom comparator as well: no comparator gives a NaN endpoint a sound meaning
+        assertIllegalArgumentException(() -> Range.of(5.0, Double.NaN, Comparator.naturalOrder()));
+        // NumberRange over Float/Double shares the same root constructor
+        assertIllegalArgumentException(() -> new NumberRange<>(5.0f, Float.NaN, null));
+        assertIllegalArgumentException(() -> new NumberRange<>(Double.NaN, 5.0, null));
+        assertNotNull(new NumberRange<>(5.0f, 6.0f, null));
+        // infinities remain legal endpoints
+        assertTrue(Range.of(0.0f, Float.POSITIVE_INFINITY).contains(Float.MAX_VALUE));
+    }
+
+    @Test
     void testOfWithCompare() {
         // all integers are equal
         final Comparator<Integer> c = (o1, o2) -> 0;

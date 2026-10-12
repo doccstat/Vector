@@ -717,6 +717,9 @@ TEST(chrono_test, weekday) {
     EXPECT_THAT(saturdays, Contains(fmt::format(loc, "{:L}", sat)));
     EXPECT_THAT(saturdays, Contains(fmt::format(loc, "{:L%a}", sat)));
     EXPECT_THAT(saturdays, Contains(fmt::format(loc, "{:L%a}", tm)));
+    // Without an explicit locale the global one is used.
+    EXPECT_THAT(saturdays, Contains(fmt::format("{:L}", sat)));
+    EXPECT_THAT(saturdays, Contains(fmt::format("{:L%a}", tm)));
   }
 }
 
@@ -994,6 +997,20 @@ TEST(chrono_test, out_of_range) {
   EXPECT_THROW((void)fmt::format("{:%j}", fd), fmt::format_error);
 }
 
+TEST(chrono_test, calendar_padding) {
+  EXPECT_EQ("05   ", fmt::format("{:5}", fmt::day(5)));
+  EXPECT_EQ("  Jan", fmt::format("{:>5}", fmt::month(1)));
+  EXPECT_EQ("2024 ", fmt::format("{:5}", fmt::year(2024)));
+  EXPECT_EQ("  Sat", fmt::format("{:>5}", fmt::weekday(6)));
+  EXPECT_EQ(" 2024-01-05",
+            fmt::format("{:>11}",
+                        fmt::year_month_day(fmt::year(2024), fmt::month(1),
+                                            fmt::day(5))));
+
+  // An explicit chrono format still overrides the default.
+  EXPECT_EQ("January", fmt::format("{:%B}", fmt::month(1)));
+}
+
 TEST(chrono_test, year_month_day) {
   auto loc = get_locale("es_ES.UTF-8");
   std::locale::global(loc);
@@ -1024,5 +1041,6 @@ TEST(chrono_test, year_month_day) {
     auto months = std::vector<std::string>{"ene.", "ene"};
     EXPECT_THAT(months, Contains(fmt::format(loc, "{:L}", month)));
     EXPECT_THAT(months, Contains(fmt::format(loc, "{:L%b}", month)));
+    EXPECT_THAT(months, Contains(fmt::format("{:L}", month)));
   }
 }

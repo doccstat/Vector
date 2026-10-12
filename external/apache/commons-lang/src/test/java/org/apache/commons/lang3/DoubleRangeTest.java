@@ -372,6 +372,24 @@ class DoubleRangeTest extends AbstractLangTest {
         assertTrue(ri.contains(11), "should contain 11");
     }
 
+    /**
+     * A NaN endpoint sorts above every double under Double.compareTo's total order, so it used to construct a
+     * half-unbounded range whose contains()/fit() accepted every value above the minimum. Construction must fail
+     * closed instead (mirroring Validate.notNaN).
+     */
+    @Test
+    void testNaNEndpointsRejected() {
+        assertIllegalArgumentException(() -> of(5.0, Double.NaN));
+        assertIllegalArgumentException(() -> of(Double.NaN, 5.0));
+        assertIllegalArgumentException(() -> of(Double.NaN, Double.NaN));
+        assertIllegalArgumentException(() -> of(Double.valueOf(5.0), Double.valueOf(Double.NaN)));
+        // computed-NaN routes, not just the literal
+        assertIllegalArgumentException(() -> of(0.0, 0.0 / 0.0));
+        assertIllegalArgumentException(() -> of(1.0, 0.0 * Double.POSITIVE_INFINITY));
+        // infinities remain legal endpoints
+        assertTrue(of(0.0, Double.POSITIVE_INFINITY).contains(Double.MAX_VALUE));
+    }
+
     @Test
     void testOfWithContains() {
         // all integers are equal

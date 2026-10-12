@@ -22,11 +22,11 @@
   <parent>
     <groupId>org.apache.commons</groupId>
     <artifactId>commons-parent</artifactId>
-    <version>103</version>
+    <version>105</version>
   </parent>
   <modelVersion>4.0.0</modelVersion>
   <artifactId>commons-lang3</artifactId>
-  <version>3.21.0-SNAPSHOT</version>
+  <version>3.21.1-SNAPSHOT</version>
   <name>Apache Commons Lang</name>
   <inceptionYear>2001</inceptionYear>
   <description>
@@ -79,6 +79,7 @@
     <dependency>
       <groupId>org.mockito</groupId>
       <artifactId>mockito-inline</artifactId>
+      <scope>test</scope>
     </dependency>
     <!-- For Javadoc links -->
     <dependency>
@@ -113,14 +114,15 @@
     <commons.javadoc.version>3.11.2</commons.javadoc.version>
     <!-- TEMP HACK END -->
 
+    <agentArgs/>
     <heapSize>-Xmx1G</heapSize>
     <extraArgs/>
     <systemProperties/>
-    <argLine>${heapSize} ${extraArgs} ${systemProperties}</argLine>
+    <argLine>${heapSize} ${extraArgs} ${systemProperties} ${agentArgs}</argLine>
     <project.build.sourceEncoding>ISO-8859-1</project.build.sourceEncoding>
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
     <!-- project.build.outputTimestamp is managed by Maven plugins, see https://maven.apache.org/guides/mini/guide-reproducible-builds.html -->
-    <project.build.outputTimestamp>2025-11-16T12:58:18Z</project.build.outputTimestamp>
+    <project.build.outputTimestamp>2026-09-29T18:07:54Z</project.build.outputTimestamp>
     <maven.compiler.source>1.8</maven.compiler.source>
     <maven.compiler.target>1.8</maven.compiler.target>
     <!--
@@ -138,8 +140,8 @@
     <commons.packageId>lang3</commons.packageId>
     <commons.module.name>org.apache.commons.lang3</commons.module.name>
     <!-- Current 3.x release series -->
-    <commons.release.version>3.21.0</commons.release.version>
-    <commons.release.next>3.21.1</commons.release.next>
+    <commons.release.version>3.21.1</commons.release.version>
+    <commons.release.next>3.21.2</commons.release.next>
     <commons.release.desc>(Java 8+)</commons.release.desc>
     <!-- Previous 2.x release series -->
     <commons.release.2.version>2.6</commons.release.2.version>
@@ -156,7 +158,7 @@
     <japicmp.skip>false</japicmp.skip>
     <uberjar.name>benchmarks</uberjar.name>
     <!-- Commons Release Plugin -->
-    <commons.bc.version>3.20.0</commons.bc.version>
+    <commons.bc.version>3.21.0</commons.bc.version>
     <commons.rc.version>RC1</commons.rc.version>
     <commons.release.isDistModule>true</commons.release.isDistModule>
     <commons.distSvnStagingUrl>scm:svn:https://dist.apache.org/repos/dist/dev/commons/lang</commons.distSvnStagingUrl>
@@ -528,6 +530,16 @@
           </plugin>
         </plugins>
       </build>
+    </profile>
+    <profile>
+      <id>java-21-up</id>
+      <activation>
+        <jdk>[21,)</jdk>
+      </activation>
+      <properties>
+        <!-- Preserve the parent's agent-loading option in the custom argLine used by Mockito tests. -->
+        <agentArgs>-XX:+EnableDynamicAgentLoading</agentArgs>
+      </properties>
     </profile>
     <profile>
 	  <!-- Java 25 and up -->

@@ -23,7 +23,10 @@ import java.util.FormattableFlags;
 import java.util.Formatter;
 
 import org.apache.commons.lang3.AbstractLangTest;
+import org.apache.commons.lang3.StringUtils;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 /**
  * Tests {@link FormattableUtils}.
@@ -110,9 +113,41 @@ class FormattableUtilsTest extends AbstractLangTest {
         assertEquals("+*   ", FormattableUtils.append("foo", new Formatter(), FormattableFlags.LEFT_JUSTIFY, 5, 2, "+*").toString());
     }
 
+    @ParameterizedTest
+    @ValueSource(ints = {0, FormattableFlags.LEFT_JUSTIFY})
+    void testEmptyPadding(final int flags) {
+        assertEquals("_____", FormattableUtils.append("", new Formatter(), flags, 5, -1, '_').toString());
+        assertEquals("_____", FormattableUtils.append("foo", new Formatter(), flags, 5, 0, '_').toString());
+    }
+
     @Test
     void testIllegalEllipsis() {
         assertIllegalArgumentException(() -> FormattableUtils.append("foo", new Formatter(), 0, -1, 1, "xx"));
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints = {0, FormattableFlags.LEFT_JUSTIFY})
+    void testLargePadding(final int flags) {
+        final int width = 500_000;
+        final String padding = StringUtils.repeat(' ', width - 3);
+        final String expected = flags == 0 ? padding + "foo" : "foo" + padding;
+        assertEquals(expected, FormattableUtils.append("foo", new Formatter(), flags, width, -1).toString());
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints = {0, FormattableFlags.LEFT_JUSTIFY})
+    void testLargePaddingWithEllipsis(final int flags) {
+        final int width = 500_000;
+        final String padding = StringUtils.repeat('\u2603', width - 3);
+        final String expected = flags == 0 ? padding + "fo*" : "fo*" + padding;
+        assertEquals(expected, FormattableUtils.append("foobar", new Formatter(), flags, width, 3, '\u2603', "*").toString());
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints = {Integer.MIN_VALUE, -1, 0, 2, 3})
+    void testNoPadding(final int width) {
+        assertEquals("foo", FormattableUtils.append("foo", new Formatter(), 0, width, -1).toString());
+        assertEquals("foo", FormattableUtils.append("foo", new Formatter(), FormattableFlags.LEFT_JUSTIFY, width, -1).toString());
     }
 
     @Test

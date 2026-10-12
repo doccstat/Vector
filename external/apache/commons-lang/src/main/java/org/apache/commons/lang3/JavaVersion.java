@@ -213,12 +213,19 @@ public enum JavaVersion {
     JAVA_27(27, "27"),
 
     /**
+     * Java 28.
+     *
+     * @since 3.21.0
+     */
+    JAVA_28(28, "28"),
+
+    /**
      * The most recent Java version. Mainly introduced to avoid to break when a new version of Java is used.
      */
     JAVA_RECENT(maxVersion(), Float.toString(maxVersion()));
 
     /**
-     * Transforms the given string with a Java version number to the corresponding constant of this enumeration class. This method is used internally.
+     * Gets the enumeration constant corresponding to the given Java version string. This method is used internally.
      *
      * @param versionStr The Java version as string.
      * @return The corresponding enumeration constant or {@code null} if the version is unknown.
@@ -284,13 +291,27 @@ public enum JavaVersion {
             return JAVA_26;
         case "27":
             return JAVA_27;
+        case "28":
+            return JAVA_28;
         default:
             final float v = toFloatVersion(versionStr);
             if (v - 1. < 1.) { // then we need to check decimals > .9
                 final int firstComma = Math.max(versionStr.indexOf('.'), versionStr.indexOf(','));
-                final int end = Math.max(versionStr.length(), versionStr.indexOf(',', firstComma));
-                if (Float.parseFloat(versionStr.substring(firstComma + 1, end)) > .9f) {
-                    return JAVA_RECENT;
+                // read up to the next separator if present, otherwise to the end of the string
+                // (this was previously an inverted Math.max that always selected the full string)
+                int end = versionStr.indexOf(',', firstComma + 1);
+                if (end == -1) {
+                    end = versionStr.length();
+                }
+                try {
+                    if (Float.parseFloat(versionStr.substring(firstComma + 1, end)) > .9f) {
+                        return JAVA_RECENT;
+                    }
+                } catch (final NumberFormatException e) {
+                    // malformed version string ("1.", "bogus"): the documented contract is to return null
+                    // for unknown versions rather than propagate an exception, which would otherwise poison
+                    // SystemUtils' static initializer for the class loader lifetime.
+                    return null;
                 }
             } else if (v > 10) {
                 return JAVA_RECENT;
@@ -300,7 +321,7 @@ public enum JavaVersion {
     }
 
     /**
-     * Transforms the given string with a Java version number to the corresponding constant of this enumeration class. This method is used internally.
+     * Gets the enumeration constant corresponding to the given Java version string. This method is used internally.
      *
      * @param versionStr The Java version as string.
      * @return The corresponding enumeration constant or {@code null} if the version is unknown.
@@ -394,7 +415,7 @@ public enum JavaVersion {
      * }</pre>
      *
      * @param requiredVersion The version to check against, not null.
-     * @return true if this version is equal to or greater than the specified version.
+     * @return true if this version is equal to or less than the specified version.
      * @since 3.9
      */
     public boolean atMost(final JavaVersion requiredVersion) {

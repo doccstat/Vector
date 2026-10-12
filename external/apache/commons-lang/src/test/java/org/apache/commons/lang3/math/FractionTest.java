@@ -31,7 +31,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
 /**
- * Test cases for the {@link Fraction} class
+ * Tests {@link Fraction}.
  */
 class FractionTest extends AbstractLangTest {
 
@@ -175,6 +175,92 @@ class FractionTest extends AbstractLangTest {
         f = f1.add(f2);
         assertEquals(2082442173, f.getNumerator());
         assertEquals(2114962910, f.getDenominator());
+    }
+
+    @Test
+    void testAddSubtractUnreducedOperands() {
+        // 1073741823/2147483646 is 1/2, and 1/2 + 3/5 is 11/10.
+        Fraction f = Fraction.getFraction(1073741823, 2147483646).add(Fraction.getFraction(3, 5));
+        assertEquals(11, f.getNumerator());
+        assertEquals(10, f.getDenominator());
+
+        f = Fraction.getFraction(1073741823, 2147483646).subtract(Fraction.getFraction(3, 5));
+        assertEquals(-1, f.getNumerator());
+        assertEquals(10, f.getDenominator());
+
+        // 2147483646/2147483646 is 1, and 1 + -11 is -10.
+        f = Fraction.getFraction(2147483646, 2147483646).add(Fraction.getFraction(-11, 1));
+        assertEquals(-10, f.getNumerator());
+        assertEquals(1, f.getDenominator());
+
+        // add() returns the result in reduced form.
+        f = Fraction.getFraction(50, 100).add(Fraction.getFraction(1, 3));
+        assertEquals(5, f.getNumerator());
+        assertEquals(6, f.getDenominator());
+
+        f = Fraction.getFraction(2, 4).add(Fraction.getFraction(1, 2));
+        assertEquals(1, f.getNumerator());
+        assertEquals(1, f.getDenominator());
+
+        // Reducing the operands by hand must not change the answer.
+        assertEquals(Fraction.getFraction(7, 13).reduce().add(Fraction.getFraction(46341, 1073741823).reduce()),
+                Fraction.getFraction(7, 13).add(Fraction.getFraction(46341, 1073741823)));
+
+        // Both operands unreduced: 2/4 + 2/6 is 1/2 + 1/3.
+        f = Fraction.getFraction(2, 4).add(Fraction.getFraction(2, 6));
+        assertEquals(5, f.getNumerator());
+        assertEquals(6, f.getDenominator());
+
+        // Reduced denominators share a factor: 2/4 - 2/12 is 1/2 - 1/6.
+        f = Fraction.getFraction(2, 4).subtract(Fraction.getFraction(2, 12));
+        assertEquals(1, f.getNumerator());
+        assertEquals(3, f.getDenominator());
+
+        // Equal values cancel to 0/1.
+        f = Fraction.getFraction(2, 4).subtract(Fraction.getFraction(3, 6));
+        assertEquals(0, f.getNumerator());
+        assertEquals(1, f.getDenominator());
+
+        // Integer.MIN_VALUE/2 reduces to -1073741824/1 without overflowing.
+        f = Fraction.getFraction(Integer.MIN_VALUE, 2).add(Fraction.getFraction(2, 4));
+        assertEquals(-Integer.MAX_VALUE, f.getNumerator());
+        assertEquals(2, f.getDenominator());
+
+        // A result that genuinely does not fit an int still overflows.
+        final Fraction maxValue = Fraction.getFraction(-Integer.MAX_VALUE, 1);
+        assertThrows(ArithmeticException.class, () -> maxValue.add(maxValue));
+    }
+
+    @Test
+    void testAddSubtractZeroOperand() {
+        // A zero operand returns the other operand in reduced form.
+        Fraction f = Fraction.ZERO.add(Fraction.getFraction(2, 4));
+        assertEquals(1, f.getNumerator());
+        assertEquals(2, f.getDenominator());
+
+        f = Fraction.getFraction(2, 4).add(Fraction.ZERO);
+        assertEquals(1, f.getNumerator());
+        assertEquals(2, f.getDenominator());
+
+        f = Fraction.ZERO.subtract(Fraction.getFraction(2, 4));
+        assertEquals(-1, f.getNumerator());
+        assertEquals(2, f.getDenominator());
+
+        f = Fraction.getFraction(2, 4).subtract(Fraction.ZERO);
+        assertEquals(1, f.getNumerator());
+        assertEquals(2, f.getDenominator());
+
+        // Integer.MIN_VALUE/2 reduces to -1073741824/1, whose negation fits an int.
+        f = Fraction.ZERO.subtract(Fraction.getFraction(Integer.MIN_VALUE, 2));
+        assertEquals(1073741824, f.getNumerator());
+        assertEquals(1, f.getDenominator());
+
+        // Integer.MIN_VALUE/1 is in lowest terms and still cannot be negated.
+        assertThrows(ArithmeticException.class, () -> Fraction.ZERO.subtract(Fraction.getFraction(Integer.MIN_VALUE, 1)));
+
+        // both operands being unreduced zeros
+        assertEquals(Fraction.ZERO, Fraction.getFraction(0, 2).add(Fraction.getFraction(0, 3)));
+        assertEquals(Fraction.ZERO, Fraction.getFraction(0, 2).subtract(Fraction.getFraction(0, 3)));
     }
 
     @Test
@@ -609,6 +695,26 @@ class FractionTest extends AbstractLangTest {
         assertThrows(NumberFormatException.class, () -> Fraction.getFraction(" "));
     }
 
+    /**
+     * Tests that string contents that are well-formed but unrepresentable throw the documented NumberFormatException
+     * (with the ArithmeticException preserved as the cause) instead of an undeclared ArithmeticException.
+     */
+    @Test
+    void testFactory_String_unrepresentableThrowsNumberFormatException() {
+        // double delegation path: out of int range and non-convergent values
+        NumberFormatException e = assertThrows(NumberFormatException.class, () -> Fraction.getFraction("9999999999.5"));
+        assertTrue(e.getCause() instanceof ArithmeticException);
+        assertThrows(NumberFormatException.class, () -> Fraction.getFraction("2147483648.5"));
+        // Y/Z path: zero denominator and negation overflow
+        e = assertThrows(NumberFormatException.class, () -> Fraction.getFraction("1/0"));
+        assertTrue(e.getCause() instanceof ArithmeticException);
+        assertThrows(NumberFormatException.class, () -> Fraction.getFraction("1/-2147483648"));
+        // X Y/Z path: zero denominator and combined-numerator overflow
+        e = assertThrows(NumberFormatException.class, () -> Fraction.getFraction("1 2/0"));
+        assertTrue(e.getCause() instanceof ArithmeticException);
+        assertThrows(NumberFormatException.class, () -> Fraction.getFraction("2147483647 1/2"));
+    }
+
     @Test
     void testGets() {
         Fraction f;
@@ -1006,6 +1112,30 @@ class FractionTest extends AbstractLangTest {
         f = Fraction.getReducedFraction(Integer.MIN_VALUE, 2);
         assertEquals(Integer.MIN_VALUE / 2, f.getNumerator());
         assertEquals(1, f.getDenominator());
+    }
+
+    @Test
+    void testReducedFactoryIntegerMinValue() {
+        Fraction f = Fraction.getReducedFraction(Integer.MIN_VALUE, -2);
+        assertEquals(1073741824, f.getNumerator());
+        assertEquals(1, f.getDenominator());
+
+        f = Fraction.getReducedFraction(Integer.MIN_VALUE, -6);
+        assertEquals(1073741824, f.getNumerator());
+        assertEquals(3, f.getDenominator());
+
+        f = Fraction.getReducedFraction(Integer.MIN_VALUE, Integer.MIN_VALUE);
+        assertEquals(1, f.getNumerator());
+        assertEquals(1, f.getDenominator());
+
+        assertThrows(ArithmeticException.class, () -> Fraction.getReducedFraction(Integer.MIN_VALUE, -1));
+        assertThrows(ArithmeticException.class, () -> Fraction.getReducedFraction(Integer.MIN_VALUE, -3));
+
+        f = Fraction.getReducedFraction(-2, Integer.MIN_VALUE);
+        assertEquals(1, f.getNumerator());
+        assertEquals(1073741824, f.getDenominator());
+
+        assertThrows(ArithmeticException.class, () -> Fraction.getReducedFraction(-7, Integer.MIN_VALUE));
     }
 
     @Test
